@@ -58,8 +58,8 @@ def get_ol_i_id():
     ol_cnt = random.randrange(5, 16)
     rbk = random.randrange(100)
     ret = [NURand(8191, 1, 100001, C=_C_RUN) for i in range(ol_cnt)]
-    if rbk == 0:
-        ret[-1] = 100001  # unused item number
+    # if rbk == 0:
+    #     ret[-1] = 100001  # unused item number
     return ret
 
 

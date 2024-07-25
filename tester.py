@@ -16,9 +16,11 @@ def get_choice(choices):
     assert False, "Shouldn't get here"
 
 
-def do_test(driver, lock, txns, txn_prob=[0.45, 0.43, 0.04, 0.04, 0.04]):
+def do_test(driver, lock, txns, txn_prob=None):
     # print(duration)
     # print('Test')
+    if txn_prob is None:
+        txn_prob = [10 / 23, 10 / 23, 1 / 23, 1 / 23, 1 / 23]
     t_start = time.time()
 
     # for i in range(txns):
@@ -83,6 +85,7 @@ def do_test(driver, lock, txns, txn_prob=[0.45, 0.43, 0.04, 0.04, 0.04]):
     # else:
     #     put_txn(lock, txn, t2 - t1, True)
 
+    global t1, t2
     for i in range(txns):
         txn = get_choice(txn_prob)
         ret = SQLState.ABORT

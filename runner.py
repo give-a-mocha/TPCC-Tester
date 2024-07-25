@@ -29,7 +29,7 @@ def prepare():
     driver.delay_close()
 
 
-def test(lock, tid, txns=150, txn_prob=[0.45, 0.43, 0.04, 0.04, 0.04]):
+def test(lock, tid, txns=150, txn_prob=None):
     print(f'+ Test_{tid} Begin')
     driver = Driver(scale=1)
     do_test(driver, lock, txns, txn_prob)
@@ -85,7 +85,7 @@ def main():
         process_list = []
         if args.rw:
             for i in range(thread_num):
-                process_list.append(Process(target=test, args=(lock, i + 1, args.rw, [10, 10, 1, 1, 1])))
+                process_list.append(Process(target=test, args=(lock, i + 1, args.rw, [10 / 23, 10 / 23, 1 / 23, 1 / 23, 1 / 23])))
                 process_list[i].start()
 
             for i in range(thread_num):
@@ -94,7 +94,7 @@ def main():
         process_list = []
         if args.ro:
             for i in range(thread_num):
-                process_list.append(Process(target=test, args=(lock, i + 1, args.ro, [0, 0, 1, 1, 0])))
+                process_list.append(Process(target=test, args=(lock, i + 1, args.ro, [0, 0, 0, 0.5, 0.5])))
                 process_list[i].start()
 
             for i in range(thread_num):

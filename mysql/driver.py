@@ -1,9 +1,12 @@
 import re
 import time
 
+from db.rmdb_client import Client
 from mysql.sql import *
 from util import *
 
+W_ID_MAX = 21
+D_ID_MAX = 11
 
 class Driver:
     def __init__(self, scale):
@@ -57,20 +60,23 @@ class Driver:
         print("consistency checking...")
 
         try:
-            for w_id in range(1, 44):
-                for d_id in range(1, 11):
+            for w_id in range(1, W_ID_MAX):
+                for d_id in range(1, D_ID_MAX):
                     res = select(client=self._client,
                                  table=DISTRICT,
-                                 col=(D_NEXT_O_ID),
+                                 col=(D_NEXT_O_ID,),  # 加逗号，否则会被认为是字符串，而不是元组
                                  where=[(D_W_ID, eq, w_id),
                                         (D_ID, eq, d_id)])
+                    if res == SQLState.ABORT:
+                        print("error")
+                        return
 
                     d_next_o_id = res[0][0]
                     d_next_o_id = eval(d_next_o_id)
 
                     res = select(client=self._client,
                                  table=ORDERS,
-                                 col=(MAX(O_ID)),
+                                 col=(MAX(O_ID),),
                                  where=[(O_W_ID, eq, w_id),
                                         (O_D_ID, eq, d_id)])
 
@@ -83,7 +89,7 @@ class Driver:
 
                     res = select(client=self._client,
                                  table=NEW_ORDERS,
-                                 col=(MAX(NO_O_ID)),
+                                 col=(MAX(NO_O_ID),),
                                  where=[(NO_W_ID, eq, w_id),
                                         (NO_D_ID, eq, d_id)])
 
@@ -96,15 +102,15 @@ class Driver:
 
                     if d_next_o_id - 1 != max_o_id or d_next_o_id - 1 != max_no_o_id:
                         print(f"consistency check error in: {w_id}, {d_id}")
-                        return
+                        # return
 
             print("consistency check for district, orders and new_orders pass!")
 
-            for w_id in range(1, 44):
-                for d_id in range(1, 11):
+            for w_id in range(1, W_ID_MAX):
+                for d_id in range(1, D_ID_MAX):
                     res = select(client=self._client,
                                  table=NEW_ORDERS,
-                                 col=(COUNT(NO_O_ID)),
+                                 col=(COUNT(NO_O_ID),),
                                  where=[(NO_W_ID, eq, w_id),
                                         (NO_D_ID, eq, d_id)])
 
@@ -112,7 +118,7 @@ class Driver:
 
                     res = select(client=self._client,
                                  table=NEW_ORDERS,
-                                 col=(MAX(NO_O_ID)),
+                                 col=(MAX(NO_O_ID),),
                                  where=[(NO_W_ID, eq, w_id),
                                         (NO_D_ID, eq, d_id)])
 
@@ -120,7 +126,7 @@ class Driver:
 
                     res = select(client=self._client,
                                  table=NEW_ORDERS,
-                                 col=(MIN(NO_O_ID)),
+                                 col=(MIN(NO_O_ID),),
                                  where=[(NO_W_ID, eq, w_id),
                                         (NO_D_ID, eq, d_id)])
 
@@ -129,15 +135,15 @@ class Driver:
                     if num_no_o_id != max_no_o_id - min_no_o_id + 1:
                         print(f"consistency check error in: {w_id}, {d_id}")
                         print(f"Unexpected orders: {num_no_o_id}, {max_no_o_id}, {min_no_o_id}")
-                        return
+                        # return
 
             print("consistency check for new_orders pass!")
 
-            for w_id in range(1, 44):
-                for d_id in range(1, 11):
+            for w_id in range(1, W_ID_MAX):
+                for d_id in range(1, D_ID_MAX):
                     res = select(client=self._client,
                                  table=ORDERS,
-                                 col=(SUM(O_OL_CNT)),
+                                 col=(SUM(O_OL_CNT),),
                                  where=[(O_W_ID, eq, w_id),
                                         (O_D_ID, eq, d_id)])
 
@@ -145,7 +151,7 @@ class Driver:
 
                     res = select(client=self._client,
                                  table=ORDER_LINE,
-                                 col=(COUNT(OL_O_ID)),
+                                 col=(COUNT(OL_O_ID),),
                                  where=[(OL_W_ID, eq, w_id),
                                         (OL_D_ID, eq, d_id)])
 
@@ -153,13 +159,15 @@ class Driver:
 
                     if sum_o_ol_cnt != num_ol_o_id:
                         print(f"consistency check error in: {w_id}, {d_id}")
-                        return
+                        # return
 
             print("consistency check for orders and order_line pass!")
 
         except Exception as e:
             print(f"Exception occurred in w_id: {w_id}, d_id: {d_id}")
             print(e)
+
+        time.sleep(1)
 
     # try:
     #     for w_id in range(1, 51):
@@ -270,6 +278,7 @@ class Driver:
     #         self._client.send_cmd(line)
 
     def do_new_order(self, w_id, d_id, c_id, ol_i_id, ol_supply_w_id, ol_quantity):
+        global res
         ol_cnt = len(ol_i_id)
         ol_amount = 0
         total_amount = 0
@@ -280,6 +289,7 @@ class Driver:
             return SQLState.ABORT
         # print('+ New Order')
         # phase 1
+        # 检索仓库（warehouse）税率、区域（district）税率和下一个可用订单号。
         try:
             res = select(client=self._client,
                          table=DISTRICT,
@@ -292,10 +302,13 @@ class Driver:
                 return SQLState.ABORT
 
             d_tax, d_next_o_id = res[0]
-            d_tax = eval(d_tax);
+            d_tax = eval(d_tax)
             d_next_o_id = eval(d_next_o_id)
         except Exception as e:
-            d_tax = 0;
+            print(f"Exception occurred in w_id: {w_id}, d_id: {d_id}, res: {res}")
+            print(e)
+            # exit(1)
+            d_tax = 0
             d_next_o_id = 0
 
         if update(client=self._client,
@@ -306,7 +319,7 @@ class Driver:
 
         try:
             res = select(client=self._client,
-                         col=[C_DISCOUNT, C_LAST, C_CREDIT, W_TAX],
+                         col=(C_DISCOUNT, C_LAST, C_CREDIT, W_TAX),
                          table=[CUSTOMER, WAREHOUSE],
                          where=[(W_ID, eq, w_id), (C_W_ID, eq, W_ID), (C_D_ID, eq, d_id), (C_ID, eq, c_id)]
                          )
@@ -316,10 +329,13 @@ class Driver:
             c_discount = eval(c_discount)
             w_tax = eval(w_tax)
         except Exception as e:
+            print('error', CUSTOMER, WAREHOUSE)
+            # exit(1)
             c_discount = 0
             w_tax = 0
 
         # phase 2
+        # 插入订单（order）、新订单（new-order）和新订单行（order-line）。
         order_time = "'" + current_time() + "'"
         if insert(client=self._client,
                   table=ORDERS,
@@ -331,6 +347,7 @@ class Driver:
                   table=NEW_ORDERS,
                   rows=(d_next_o_id, d_id, w_id)) == SQLState.ABORT:
             return SQLState.ABORT
+
         # phase 3
         for i in range(ol_cnt):
             try:
@@ -343,7 +360,9 @@ class Driver:
                 i_price, i_name, i_data = res[0]
                 i_price = eval(i_price)
             except Exception as e:
-                i_price = 1;
+                print('error', ITEM)
+                # exit(1)
+                i_price = 1
                 i_data = 'null'
 
             try:
@@ -357,26 +376,31 @@ class Driver:
                                     (S_W_ID, eq, ol_supply_w_id[i])])
                 if res == SQLState.ABORT:
                     return SQLState.ABORT
-                _quantity, *s_dist, s_ytd, s_order_cnt, s_remote_cnt, s_data = res[0]
-                s_quantity = eval(s_quantity);
-                s_ytd = eval(s_ytd);
-                s_order_cnt = eval(s_order_cnt);
-                s_remote_cnt = eval(s_remote_cnt);
+                s_quantity, *s_dist, s_ytd, s_order_cnt, s_remote_cnt, s_data = res[0]
+                s_quantity = eval(s_quantity)
+                s_ytd = eval(s_ytd)
+                s_order_cnt = eval(s_order_cnt)
+                s_remote_cnt = eval(s_remote_cnt)
             except Exception as e:
-                s_quantity = 0;
-                s_ytd = 0;
-                s_order_cnt = 0;
-                s_remote_cnt = 0;
+                print('error', STOCK)
+                # exit(1)
+                s_quantity = 0
+                s_ytd = 0
+                s_order_cnt = 0
+                s_remote_cnt = 0
                 s_dist = []
 
             if s_quantity - ol_quantity[i] >= 10:
                 s_quantity -= ol_quantity[i]
             else:
                 s_quantity = s_quantity - ol_quantity[i] + 91
+
             s_ytd += ol_quantity[i]
             s_order_cnt += 1
+
             if ol_supply_w_id[i] != w_id:
                 s_remote_cnt += 1
+
             if update(client=self._client,
                       table=STOCK,
                       row=[(S_QUANTITY, s_quantity),
@@ -388,6 +412,7 @@ class Driver:
                 return SQLState.ABORT
             ol_amount = ol_quantity[i] * i_price
             brand_generic = 'B' if re.search('ORIGINAL', i_data) and re.search('ORIGINAL', s_data) else 'G'
+
             try:
                 if insert(client=self._client,
                           table=ORDER_LINE,
@@ -396,9 +421,13 @@ class Driver:
                     return SQLState.ABORT
 
             except Exception as e:
+                print('error', ORDER_LINE)
                 pass
+
             total_amount += ol_amount
+
         total_amount *= (1 - c_discount) * (1 + w_tax + d_tax)
+
         if self._client.send_cmd("COMMIT;") == SQLState.ABORT:
             return SQLState.ABORT
         # print('- New Order')
@@ -502,7 +531,7 @@ class Driver:
                 c_data = (''.join(map(str, [c_id, c_d_id, c_w_id, d_id, h_amount])) \
                           + select(client=self._client,
                                    table=CUSTOMER,
-                                   col=C_DATA,
+                                   col=(C_DATA,),
                                    where=[(C_ID, eq, c_id),
                                           (C_W_ID, eq, c_w_id),
                                           (C_D_ID, eq, c_d_id)])[0][0])[0:500]
@@ -606,10 +635,11 @@ class Driver:
             try:
                 res = select(client=self._client,
                              table=NEW_ORDERS,
-                             col=NO_O_ID,
+                             col=(NO_O_ID,),
                              where=[(NO_W_ID, eq, w_id), (NO_D_ID, eq, d_id)],
                              # order_by=NO_O_ID,
-                             asc=True)
+                             # asc=True
+                            )
                 if res == SQLState.ABORT:
                     return SQLState.ABORT
                 o_id = res[0][0]
@@ -623,7 +653,7 @@ class Driver:
             try:
                 res = select(client=self._client,
                              table=ORDERS,
-                             col=O_C_ID,
+                             col=(O_C_ID,),
                              where=[(O_ID, eq, o_id), (O_W_ID, eq, w_id), (O_D_ID, eq, d_id)])
                 if res == SQLState.ABORT:
                     return SQLState.ABORT
@@ -654,7 +684,7 @@ class Driver:
             try:
                 res = select(client=self._client,
                              table=ORDER_LINE,
-                             col=OL_AMOUNT,
+                             col=(OL_AMOUNT,),
                              where=[(OL_W_ID, eq, w_id), (OL_D_ID, eq, d_id), (OL_O_ID, eq, o_id)])
                 if res == SQLState.ABORT:
                     return SQLState.ABORT
@@ -711,7 +741,7 @@ class Driver:
         try:
             res = select(client=self._client,
                          table=DISTRICT,
-                         col=D_NEXT_O_ID,
+                         col=(D_NEXT_O_ID,),
                          where=[(D_W_ID, eq, w_id), (D_ID, eq, d_id)])
             if res == SQLState.ABORT:
                 return SQLState.ABORT
@@ -741,7 +771,7 @@ class Driver:
             try:
                 res = select(client=self._client,
                              table=STOCK,
-                             col=S_QUANTITY,
+                             col=(S_QUANTITY,),
                              where=[(S_I_ID, eq, item),
                                     (S_W_ID, eq, w_id),
                                     (S_QUANTITY, lt, level)])

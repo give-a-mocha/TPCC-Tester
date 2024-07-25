@@ -31,8 +31,8 @@ class SQLState(Enum):
 def select(client, table, col=ALL, where=False, order_by=False, asc=False):
     if type(table) != list:
         table = [table]
-    if type(col) != list:
-        col = [col]
+    # if type(col) != list:
+    #     col = [col]
     if where and type(where) != list:
         where = [where]
     param = [ele[-1] for ele in where]
