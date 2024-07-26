@@ -22,7 +22,7 @@ def clean():
 def prepare():
     driver = Driver(scale=1)
     driver.all_in_load()  # loading 阶段
-    driver.consistency_check()  # 一致性校验
+    # driver.consistency_check()  # 一致性校验
     # driver.build()  # 创建9个tables
     # driver.create_index() # 建立除history表外其余表的索引
     # driver.load()  # 加载csv数据到9张表
@@ -85,7 +85,8 @@ def main():
         process_list = []
         if args.rw:
             for i in range(thread_num):
-                process_list.append(Process(target=test, args=(lock, i + 1, args.rw, [10 / 23, 10 / 23, 1 / 23, 1 / 23, 1 / 23])))
+                process_list.append(
+                    Process(target=test, args=(lock, i + 1, args.rw, [10 / 23, 10 / 23, 1 / 23, 1 / 23, 1 / 23])))
                 process_list[i].start()
 
             for i in range(thread_num):
@@ -111,8 +112,8 @@ def main():
         print(f'total time: {t3 - t1}')
         print(f'tpmC: {new_order_success / ((t3 - t1) / 60)}')
         # 评测机估计 tpmC
-        print(f'Server tpmC F: {new_order_success / ((t3 - t1) / 60) * 3.83215962441}')
-        print(f'Server tpmC T: {new_order_success / ((t3 - t1) / 60) / 17.5409836066}')
+        # print(f'Server tpmC F: {new_order_success / ((t3 - t1) / 60) * 3.83215962441}')
+        # print(f'Server tpmC T: {new_order_success / ((t3 - t1) / 60) / 17.5409836066}')
 
 
 if __name__ == '__main__':

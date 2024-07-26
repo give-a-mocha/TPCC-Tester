@@ -111,19 +111,19 @@ def do_test(driver, lock, txns, txn_prob=None):
                 ret = driver.do_payment(1, d_id, c_w_id, c_d_id, query_cus_by(), random.random() * (5000 - 1) + 1)
                 t2 = time.time()
 
-            elif txn == 2:  # OrderStatus
+            elif txn == 2:  # Delivery
+                t1 = time.time()
+                ret = driver.do_delivery(1, get_o_carrier_id())
+                t2 = time.time()
+
+            elif txn == 3:  # OrderStatus
                 t1 = time.time()
                 ret = driver.do_order_status(1, get_d_id(), query_cus_by())
                 t2 = time.time()
 
-            elif txn == 3:  # StockLevel
+            elif txn == 4:  # StockLevel
                 t1 = time.time()
                 ret = driver.do_stock_level(1, get_d_id(), random.randrange(10, 21))
-                t2 = time.time()
-
-            elif txn == 4:  # Delivery
-                t1 = time.time()
-                ret = driver.do_delivery(1, get_o_carrier_id())
                 t2 = time.time()
 
             if ret == SQLState.ABORT:
