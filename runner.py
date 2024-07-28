@@ -22,7 +22,8 @@ def clean():
 def prepare():
     driver = Driver(scale=1)
     driver.all_in_load()  # loading 阶段
-    # driver.consistency_check()  # 一致性校验
+    driver.count_star()
+    driver.consistency_check()  # 一致性校验
     # driver.build()  # 创建9个tables
     # driver.create_index() # 建立除history表外其余表的索引
     # driver.load()  # 加载csv数据到9张表
@@ -111,9 +112,6 @@ def main():
         print(f'total time of ro txns: {t3 - t2}')
         print(f'total time: {t3 - t1}')
         print(f'tpmC: {new_order_success / ((t3 - t1) / 60)}')
-        # 评测机估计 tpmC
-        # print(f'Server tpmC F: {new_order_success / ((t3 - t1) / 60) * 3.83215962441}')
-        # print(f'Server tpmC T: {new_order_success / ((t3 - t1) / 60) / 17.5409836066}')
 
 
 if __name__ == '__main__':

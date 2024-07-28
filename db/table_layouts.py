@@ -119,8 +119,22 @@ I_DATA = 'i_data'
 
 
 # Aggressive func
-def COUNT(x='*'):
-    return 'count(' + x + ')'
+def COUNT(x='*', AS=None):
+    """
+    This function generates a SQL count expression based on the input parameters `x` and `AS` (optional).
+
+    :param x: The column name or expression to be counted.
+    :param AS: The alias for the count result, optional.
+    :return: A string representing the SQL count expression.
+    """
+    # Construct the basic count expression
+    count_expr = f'count({x})'
+
+    # If an alias is provided, append it to the count expression
+    if AS:
+        count_expr += f' as {AS}'
+
+    return count_expr
 
 
 def MIN(x='*'):

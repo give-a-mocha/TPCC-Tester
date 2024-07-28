@@ -35,7 +35,10 @@ def select(client, table, col=ALL, where=False, order_by=False, asc=False):
     #     col = [col]
     if where and type(where) != list:
         where = [where]
-    param = [ele[-1] for ele in where]
+
+    param = []
+    if where:
+        param = [ele[-1] for ele in where]
 
     table = ','.join(table)
 

@@ -5,8 +5,32 @@ from db.rmdb_client import Client
 from mysql.sql import *
 from util import *
 
+CNT_W = 20
+CNT_ITEM = 100000
+CNT_STOCK = CNT_W * 100000
+CNT_DISTRICT = CNT_W * 10
+CNT_CUSTOMER = CNT_W * 10 * 3000
+CNT_HISTORY = CNT_W * 10 * 3000
+CNT_ORDERS = CNT_W * 10 * 3000
+CNT_NEW_ORDERS = CNT_W * 10 * 900
+CNT_ORDER_LINE = CNT_ORDERS * 10
+
+# 定义每个表的参数
+tables_info = [
+    (WAREHOUSE, 'count_warehouse', CNT_W, 'count_warehouse'),
+    (DISTRICT, 'count_district', CNT_DISTRICT, 'count_district'),
+    (CUSTOMER, 'count_customer', CNT_CUSTOMER, 'count_customer'),
+    (HISTORY, 'count_history', CNT_HISTORY, 'count_history'),
+    (NEW_ORDERS, 'count_new_orders', CNT_NEW_ORDERS, 'count_new_orders'),
+    (ORDERS, 'count_orders', CNT_ORDERS, 'count_orders'),
+    (ORDER_LINE, 'count_order_line', CNT_ORDER_LINE, 'count_order_line'),
+    (ITEM, 'count_item', CNT_ITEM, 'count_item'),
+    (STOCK, 'count_stock', CNT_STOCK, 'count_stock')
+]
+
 W_ID_MAX = 21
 D_ID_MAX = 11
+
 
 class Driver:
     def __init__(self, scale):
@@ -55,6 +79,33 @@ class Driver:
         for line in sql:
             if (line):
                 self._client.send_cmd(line)
+
+    def count_and_check(self, client, table, count_as, expected_count, count_type):
+        """
+        A helper function to count and check the result.
+
+        :param client: The database client.
+        :param table: The table to perform the count on.
+        :param count_as: The alias for the count column.
+        :param expected_count: The expected count value.
+        :param count_type: Descriptive type of count for error messages.
+        :return: None
+        """
+        count_result = 0
+        res = select(client=client, table=table, col=(COUNT(AS=count_as),))
+        try:
+            count_result = eval(res[0][0])
+        except IndexError:
+            print(f'error, {count_type}: {count_result}, expecting: {expected_count}')
+            return
+        if count_result != expected_count:
+            print(f'failed, {count_type}: {count_result}, expecting: {expected_count}')
+
+    def count_star(self):
+        print("Count star...")
+        # 遍历每个表的信息并进行检查
+        for table, count_as, expected_count, count_type in tables_info:
+            self.count_and_check(self._client, table, count_as, expected_count, count_type)
 
     def consistency_check(self):
         print("consistency checking...")
@@ -166,116 +217,6 @@ class Driver:
         except Exception as e:
             print(f"Exception occurred in w_id: {w_id}, d_id: {d_id}")
             print(e)
-
-        time.sleep(1)
-
-    # try:
-    #     for w_id in range(1, 51):
-    #         for d_id in range(1, 11):
-    #             res = select(client=self._client,
-    #                          table=DISTRICT,
-    #                          col = (D_NEXT_O_ID),
-    #                          where=[(D_W_ID,eq,w_id),
-    #                                 (D_ID,eq,d_id)])
-    #
-    #             d_next_o_id = res[0][0]
-    #             d_next_o_id = eval(d_next_o_id)
-    #
-    #             res = select(client=self._client,
-    #                          table=ORDERS,
-    #                          col = (MAX(O_ID)),
-    #                          where=[(O_W_ID,eq,w_id),
-    #                                 (O_D_ID,eq,d_id)])
-    #
-    #             if res == None:
-    #                 print("error:", w_id, d_id)
-    #                 return
-    #
-    #             max_o_id = res[0][0]
-    #             max_o_id = eval(max_o_id)
-    #
-    #             res = select(client=self._client,
-    #                          table=NEW_ORDERS,
-    #                          col = (MAX(NO_O_ID)),
-    #                          where=[(NO_W_ID,eq,w_id),
-    #                                 (NO_D_ID,eq,d_id)])
-    #
-    #             if res == None:
-    #                 print("error:", w_id, d_id)
-    #                 return
-    #
-    #             max_no_o_id = res[0][0]
-    #             max_no_o_id = eval(max_no_o_id)
-    #
-    #             if d_next_o_id - 1 != max_o_id or d_next_o_id - 1 != max_no_o_id:
-    #                 print("consistency check error in:", w_id, d_id)
-    #                 return
-    #
-    #     print("consistency check for district, orders and new_orders pass!")
-    #
-    #     for w_id in range(1, 51):
-    #         for d_id in range(1, 11):
-    #             res = select(client=self._client,
-    #                          table=NEW_ORDERS,
-    #                          col = (COUNT(NO_O_ID)),
-    #                          where=[(NO_W_ID,eq,w_id),
-    #                                 (NO_D_ID,eq,d_id)])
-    #
-    #             num_no_o_id = eval(res[0][0])
-    #
-    #             res = select(client=self._client,
-    #                          table=NEW_ORDERS,
-    #                          col = (MAX(NO_O_ID)),
-    #                          where=[(NO_W_ID,eq,w_id),
-    #                                 (NO_D_ID,eq,d_id)])
-    #
-    #             max_no_o_id = eval(res[0][0])
-    #
-    #             res = select(client=self._client,
-    #                          table=NEW_ORDERS,
-    #                          col = (MIN(NO_O_ID)),
-    #                          where=[(NO_W_ID,eq,w_id),
-    #                                 (NO_D_ID,eq,d_id)])
-    #
-    #             min_no_o_id = eval(res[0][0])
-    #
-    #             if num_no_o_id != max_no_o_id - min_no_o_id + 1:
-    #                 print("consistency check error in:", w_id, d_id)
-    #                 print("Unexpected orders:", num_no_o_id, max_no_o_id, min_no_o_id)
-    #                 return
-    #
-    #     print("consistency check for new_orders pass!")
-    #
-    #     for w_id in range(1, 51):
-    #         for d_id in range(1, 11):
-    #             res = select(client=self._client,
-    #                          table=ORDERS,
-    #                          col = (SUM(O_OL_CNT)),
-    #                          where=[(O_W_ID,eq,w_id),
-    #                                 (O_D_ID,eq,d_id)])
-    #
-    #             sum_o_ol_cnt = eval(res[0][0])
-    #
-    #             res = select(client=self._client,
-    #                          table=ORDER_LINE,
-    #                          col = (COUNT(OL_O_ID)),
-    #                          where=[(OL_W_ID,eq,w_id),
-    #                                 (OL_D_ID,eq,d_id)])
-    #
-    #             num_ol_o_id = eval(res[0][0])
-    #
-    #             if sum_o_ol_cnt != num_ol_o_id:
-    #                 print("consistency check error in:", w_id, d_id)
-    #                 return
-    #
-    #     print("consistency check for orders and order_line pass!")
-    # except Exception as e:
-    #     print(e)
-
-    # sql = open("RDSTester/db/load_data.sql", "r").read().split('\n')
-    # for line in sql:
-    #     if (line):
-    #         self._client.send_cmd(line)
 
     def do_new_order(self, w_id, d_id, c_id, ol_i_id, ol_supply_w_id, ol_quantity):
         global res
@@ -639,7 +580,7 @@ class Driver:
                              where=[(NO_W_ID, eq, w_id), (NO_D_ID, eq, d_id)],
                              # order_by=NO_O_ID,
                              # asc=True
-                            )
+                             )
                 if res == SQLState.ABORT:
                     return SQLState.ABORT
                 o_id = res[0][0]
