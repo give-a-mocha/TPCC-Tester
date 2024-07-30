@@ -5,7 +5,7 @@ from db.rmdb_client import Client
 from mysql.sql import *
 from util import *
 
-CNT_W = 20
+CNT_W = 50
 CNT_ITEM = 100000
 CNT_STOCK = CNT_W * 100000
 CNT_DISTRICT = CNT_W * 10
@@ -55,14 +55,14 @@ class Driver:
         print("Build table schema...")
         sql = open("RDSTester/db/create_tables.sql", "r").read().split('\n')
         for line in sql:
-            if (line):
+            if line:
                 self._client.send_cmd(line)
 
     def load(self):
         print("Load table data...")
         sql = open("RDSTester/db/load_csvs.sql", "r").read().split('\n')
         for line in sql:
-            if (line):
+            if line:
                 self._client.send_cmd(line)
         print('Database has been initialized.')
 
@@ -70,14 +70,14 @@ class Driver:
         print("Create index...")
         sql = open("RDSTester/db/create_index.sql", "r").read().split('\n')
         for line in sql:
-            if (line):
+            if line:
                 self._client.send_cmd(line)
 
     def all_in_load(self):
         print("Loading data...")
         sql = open("RDSTester/db/load_data.sql", "r").read().split('\n')
         for line in sql:
-            if (line):
+            if line:
                 self._client.send_cmd(line)
 
     def count_and_check(self, client, table, count_as, expected_count, count_type):
@@ -110,6 +110,9 @@ class Driver:
     def consistency_check(self):
         print("consistency checking...")
 
+        w_id = 0
+        d_id = 0
+
         try:
             for w_id in range(1, W_ID_MAX):
                 for d_id in range(1, D_ID_MAX):
@@ -131,7 +134,7 @@ class Driver:
                                  where=[(O_W_ID, eq, w_id),
                                         (O_D_ID, eq, d_id)])
 
-                    if res == None or len(res[0]) == 0:
+                    if res is None or len(res[0]) == 0:
                         print(f"error: {w_id}, {d_id}")
                         return
 
@@ -219,11 +222,12 @@ class Driver:
             print(e)
 
     def do_new_order(self, w_id, d_id, c_id, ol_i_id, ol_supply_w_id, ol_quantity):
-        global res
+        res = []
         ol_cnt = len(ol_i_id)
         ol_amount = 0
         total_amount = 0
         brand_generic = ''
+        s_data = ''
 
         # transcation
         if self._client.send_cmd("BEGIN;") == SQLState.ABORT:
@@ -375,6 +379,11 @@ class Driver:
         return SQLState.SUCCESS
 
     def do_payment(self, w_id, d_id, c_w_id, c_d_id, c_query, h_amount):
+        c_balance = 0
+        c_ytd_payment = 0
+        c_payment_cnt = 0
+        c_credit = 'GC'
+        c_id = 0
         if self._client.send_cmd("BEGIN;") == SQLState.ABORT:
             return SQLState.ABORT
         # print('+ Payment')
@@ -411,9 +420,9 @@ class Driver:
                   where=[(D_W_ID, eq, w_id), (D_ID, eq, d_id)]) == SQLState.ABORT:
             return SQLState.ABORT
 
-        if (type(c_query) == str):
+        if type(c_query) == str:
+            c_query = "'" + c_query + "'"
             try:
-
                 result = select(client=self._client,
                                 table=CUSTOMER,
                                 col=(C_ID, C_FIRST, C_MIDDLE, C_LAST, C_STREET_1, C_STREET_2, C_CITY, C_STATE,
@@ -423,15 +432,16 @@ class Driver:
                                        (C_W_ID, eq, c_w_id),
                                        (C_D_ID, eq, c_d_id)],
                                 # order_by=C_FIRST,
-                                asc=True)
+                                # asc=True
+                                )
                 if result == SQLState.ABORT:
                     return SQLState.ABORT
                 result = result[0]
             except Exception as e:
                 c_credit = 'GC'
-                c_id = 1;
-                c_balance = 0;
-                c_ytd_payment = 0;
+                c_id = 1
+                c_balance = 0
+                c_ytd_payment = 0
                 c_payment_cnt = 0
         else:
             try:
@@ -450,15 +460,15 @@ class Driver:
                     c_street_1, c_street_2, c_city, c_state, \
                     c_zip, c_phone, c_since, \
                     c_credit, c_credit_lim, c_discount, c_balance, c_ytd_payment, c_payment_cnt = result  # result[len(result)//2]
-                c_id = eval(c_id);
-                c_balance = eval(c_balance);
-                c_ytd_payment = eval(c_ytd_payment);
+                c_id = eval(c_id)
+                c_balance = eval(c_balance)
+                c_ytd_payment = eval(c_ytd_payment)
                 c_payment_cnt = eval(c_payment_cnt)
             except Exception as e:
                 c_credit = 'GC'
-                c_id = 1;
-                c_balance = 0;
-                c_ytd_payment = 0;
+                c_id = 1
+                c_balance = 0
+                c_ytd_payment = 0
                 c_payment_cnt = 0
         if update(client=self._client,
                   table=CUSTOMER,
@@ -469,7 +479,7 @@ class Driver:
             return SQLState.ABORT
         if c_credit == 'BC':
             try:
-                c_data = (''.join(map(str, [c_id, c_d_id, c_w_id, d_id, h_amount])) \
+                c_data = (''.join(map(str, [c_id, c_d_id, c_w_id, d_id, h_amount]))
                           + select(client=self._client,
                                    table=CUSTOMER,
                                    col=(C_DATA,),
@@ -498,14 +508,26 @@ class Driver:
         return SQLState.SUCCESS
 
     def do_order_status(self, w_id, d_id, c_query):
+        c_id = 0
         if self._client.send_cmd("BEGIN;") == SQLState.ABORT:
             return SQLState.ABORT
         # print('+ Order Status')
+        # 60% 执⾏
         if type(c_query) == str:
+            c_query = "'" + c_query + "'"
             try:
                 result = select(client=self._client,
                                 table=CUSTOMER,
-                                col=(C_ID, C_BALANCE, C_FIRST, C_MIDDLE, C_LAST),
+                                col=(COUNT(C_ID, "count_c_id"),),
+                                where=[(C_LAST, eq, c_query),
+                                       (C_W_ID, eq, w_id),
+                                       (C_D_ID, eq, d_id)])
+                if result == SQLState.ABORT:
+                    return SQLState.ABORT
+
+                result = select(client=self._client,
+                                table=CUSTOMER,
+                                col=(C_BALANCE, C_FIRST, C_MIDDLE, C_LAST),
                                 where=[(C_LAST, eq, c_query),
                                        (C_W_ID, eq, w_id),
                                        (C_D_ID, eq, d_id)],
@@ -655,10 +677,10 @@ class Driver:
                 if res == SQLState.ABORT:
                     return SQLState.ABORT
                 c_balance, c_delivery_cnt = res[0]
-                c_balance = eval(c_balance);
+                c_balance = eval(c_balance)
                 c_delivery_cnt = eval(c_delivery_cnt)
             except Exception as e:
-                c_balance = 0;
+                c_balance = 0
                 c_delivery_cnt = 0
             # print(c_balance, ol_amount, c_delivery_cnt)
             if update(client=self._client,

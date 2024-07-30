@@ -2,7 +2,8 @@ import datetime
 import random
 import string
 
-_names = ['BAR', 'OUGHT', 'ABLE', 'PRI', 'PRES', 'ESE', 'ANTI', 'CALLY', 'ATION', 'EING']
+# _names = ['BAR', 'OUGHT', 'ABLE', 'PRI', 'PRES', 'ESE', 'ANTI', 'CALLY', 'ATION', 'EING']
+_names = ['BARR', 'OUGH', 'ABLE', 'PRII', 'PRES', 'ESEE', 'ANTI', 'CALL', 'ATIO', 'EING']
 _C_LOAD = 117
 _C_RUN = 191
 
@@ -42,7 +43,7 @@ def NURand(A, x, y, C):
 def get_c_last(k=1000, run=False):
     C = _C_RUN if run else _C_LOAD
     if k >= 1000:
-        k = NURand(255, 1, 1001, C)
+        k = NURand(255, 0, 1000, C)
     return ''.join([_names[k // 100], _names[(k // 10) % 10], _names[k % 10]])
 
 
@@ -85,12 +86,11 @@ def get_c_w_id_d_id(home_w_id, d_id, scale):
 
 
 def query_cus_by():
-    # y = random.randrange(100)
-    # if y < 60:
-    #     return get_c_last(1000, run=True)
-    # else:
-    #     return get_c_id()
-    return get_c_id()
+    y = random.randrange(100)
+    if y < 60:
+        return get_c_last(1000, run=True)
+    else:
+        return get_c_id()
 
 
 def get_h_amount():
