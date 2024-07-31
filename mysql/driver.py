@@ -53,14 +53,14 @@ class Driver:
 
     def build(self):
         print("Build table schema...")
-        sql = open("RDSTester/db/create_tables.sql", "r").read().split('\n')
+        sql = open("TPCC-Tester/db/create_tables.sql", "r").read().split('\n')
         for line in sql:
             if line:
                 self._client.send_cmd(line)
 
     def load(self):
         print("Load table data...")
-        sql = open("RDSTester/db/load_csvs.sql", "r").read().split('\n')
+        sql = open("TPCC-Tester/db/load_csvs.sql", "r").read().split('\n')
         for line in sql:
             if line:
                 self._client.send_cmd(line)
@@ -68,14 +68,14 @@ class Driver:
 
     def create_index(self):
         print("Create index...")
-        sql = open("RDSTester/db/create_index.sql", "r").read().split('\n')
+        sql = open("TPCC-Tester/db/create_index.sql", "r").read().split('\n')
         for line in sql:
             if line:
                 self._client.send_cmd(line)
 
     def all_in_load(self):
         print("Loading data...")
-        sql = open("RDSTester/db/load_data.sql", "r").read().split('\n')
+        sql = open("TPCC-Tester/db/load_data.sql", "r").read().split('\n')
         for line in sql:
             if line:
                 self._client.send_cmd(line)

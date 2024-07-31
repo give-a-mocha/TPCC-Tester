@@ -10,7 +10,7 @@ name = {NewOrder: 'New Order', Payment: 'Payment', OrderStatus: 'OrderStatus', S
 
 
 def build_db():
-    conn = sqlite3.connect(f'RDSTester/result/rds.db')
+    conn = sqlite3.connect(f'TPCC-Tester/result/rds.db')
     cursor = conn.cursor()
     cursor.execute('create table new_order_txn(no integer, time real);')
     cursor.execute('create table test_result(txn integer, avg real, total integer, success integer);')
@@ -24,7 +24,7 @@ def build_db():
 
 def put_new_order(lock, time):
     lock.acquire()
-    conn = sqlite3.connect(f'RDSTester/result/rds.db')
+    conn = sqlite3.connect(f'TPCC-Tester/result/rds.db')
     cursor = conn.cursor()
     cursor.execute('begin transaction;')
     cursor.execute('select no from new_order_txn order by no desc;')
@@ -37,7 +37,7 @@ def put_new_order(lock, time):
 
 def put_txn(lock, txn, time, success):
     lock.acquire()
-    conn = sqlite3.connect(f'RDSTester/result/rds.db')
+    conn = sqlite3.connect(f'TPCC-Tester/result/rds.db')
     cursor = conn.cursor()
     cursor.execute('begin transaction;')
     cursor.execute('select avg, total, success from test_result where txn = ?', (txn,))
@@ -52,7 +52,7 @@ def put_txn(lock, txn, time, success):
 
 
 def analysis():
-    conn = sqlite3.connect(f'RDSTester/result/rds.db')
+    conn = sqlite3.connect(f'TPCC-Tester/result/rds.db')
     cursor = conn.cursor()
     cursor.execute('select * from test_result;')
     rows = cursor.fetchall()

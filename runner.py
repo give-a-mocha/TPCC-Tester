@@ -14,8 +14,8 @@ from tester import do_test
 
 
 def clean():
-    shutil.rmtree('RDSTester/result')
-    os.mkdir('RDSTester/result')
+    shutil.rmtree('TPCC-Tester/result')
+    os.mkdir('TPCC-Tester/result')
     build_db()
 
 
@@ -40,13 +40,13 @@ def test(lock, tid, txns=150, txn_prob=None):
 
 def output_result():
     result, new_order_result = analysis()
-    f = open(f'RDSTester/result/statistics_of_five_transactions.txt', 'w')
+    f = open(f'TPCC-Tester/result/statistics_of_five_transactions.txt', 'w')
     for r in result:
         f.write(str(
             r['name'] + ' - ' + '\navg time: ' + str(r['avg']) + '\ntotal: ' + str(r['total']) + '\nsuccess: ' + str(
                 r['success']) + '\n\n'))
         print(r['name'], ' - ', '\navg time: ', r['avg'], '\ntotal: ', r['total'], '\nsuccess: ', r['success'])
-    f2 = open(f'RDSTester/result/timecost_and_num_of_NewOrders.txt', 'w')
+    f2 = open(f'TPCC-Tester/result/timecost_and_num_of_NewOrders.txt', 'w')
     for n in new_order_result:
         f2.write("number: " + str(n[0]) + ", time cost: " + str(n[1]) + "\n")
     X = np.array([e[1] for e in new_order_result])
@@ -54,14 +54,14 @@ def output_result():
     plt.plot(X, Y)
     plt.ylabel('Number of New-Orders')
     plt.xlabel('Time unit: second')
-    plt.savefig(f"RDSTester/result/timecost_and_num_of_NewOrders.jpg")
+    plt.savefig(f"TPCC-Tester/result/timecost_and_num_of_NewOrders.jpg")
     plt.show()
-    os.remove(f'RDSTester/result/rds.db')
+    os.remove(f'TPCC-Tester/result/rds.db')
     # 返回 new order 成功数量
     return result[0]['success']
 
 
-# useage: python RDSTester/runner.py --prepare --thread 8 --rw 150 --ro 150 --analyze
+# useage: python TPCC-Tester/runner.py --prepare --thread 8 --rw 150 --ro 150 --analyze
 def main():
     parser = argparse.ArgumentParser(description='Python Script with Thread Number Argument')
     parser.add_argument('--prepare', action='store_true', help='Enable prepare mode')
