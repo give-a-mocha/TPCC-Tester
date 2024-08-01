@@ -118,35 +118,44 @@ I_PRICE = 'i_price'
 I_DATA = 'i_data'
 
 
-# Aggressive func
-def COUNT(x='*', AS=None):
+def COUNT(x='*', alias=None):
     """
-    This function generates a SQL count expression based on the input parameters `x` and `AS` (optional).
-
-    :param x: The column name or expression to be counted.
-    :param AS: The alias for the count result, optional.
-    :return: A string representing the SQL count expression.
+    Constructs a SQL MIN function with an optional alias.
     """
-    # Construct the basic count expression
-    count_expr = f'count({x})'
-
-    # If an alias is provided, append it to the count expression
-    if AS:
-        count_expr += f' as {AS}'
-
-    return count_expr
+    query = 'count(' + x + ')'
+    if alias:
+        query += ' AS ' + alias
+    return query
 
 
-def MIN(x='*'):
-    return 'min(' + x + ')'
+def MIN(x='*', alias=None):
+    """
+    Constructs a SQL MIN function with an optional alias.
+    """
+    query = 'min(' + x + ')'
+    if alias:
+        query += ' AS ' + alias
+    return query
 
 
-def MAX(x='*'):
-    return 'max(' + x + ')'
+def MAX(x='*', alias=None):
+    """
+    Constructs a SQL MAX function with an optional alias.
+    """
+    query = 'max(' + x + ')'
+    if alias:
+        query += ' AS ' + alias
+    return query
 
 
-def SUM(x='*'):
-    return 'sum(' + x + ')'
+def SUM(x='*', alias=None):
+    """
+    Constructs a SQL SUM function with an optional alias.
+    """
+    query = 'sum(' + x + ')'
+    if alias:
+        query += ' AS ' + alias
+    return query
 
 
 num_of_cols = {WAREHOUSE: 9,

@@ -92,7 +92,7 @@ class Driver:
         :return: None
         """
         count_result = 0
-        res = select(client=client, table=table, col=(COUNT(AS=count_as),))
+        res = select(client=client, table=table, col=(COUNT(alias=count_as),))
         try:
             count_result = eval(res[0][0])
         except IndexError:
@@ -598,7 +598,7 @@ class Driver:
             try:
                 res = select(client=self._client,
                              table=NEW_ORDERS,
-                             col=(NO_O_ID,),
+                             col=(MIN(NO_O_ID),),
                              where=[(NO_W_ID, eq, w_id), (NO_D_ID, eq, d_id)],
                              # order_by=NO_O_ID,
                              # asc=True
@@ -647,7 +647,7 @@ class Driver:
             try:
                 res = select(client=self._client,
                              table=ORDER_LINE,
-                             col=(OL_AMOUNT,),
+                             col=(SUM(OL_AMOUNT),),
                              where=[(OL_W_ID, eq, w_id), (OL_D_ID, eq, d_id), (OL_O_ID, eq, o_id)])
                 if res == SQLState.ABORT:
                     return SQLState.ABORT
