@@ -28,7 +28,7 @@ tables_info = [
     (STOCK, 'count_stock', CNT_STOCK, 'count_stock')
 ]
 
-W_ID_MAX = 21
+W_ID_MAX = 51
 D_ID_MAX = 11
 
 

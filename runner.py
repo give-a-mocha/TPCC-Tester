@@ -7,7 +7,7 @@ from multiprocessing import Process, Lock
 import matplotlib.pyplot as plt
 import numpy as np
 
-from mysql.driver import Driver
+from mysql.driver import CNT_W, Driver
 from record.record import analysis
 from record.record import build_db
 from tester import do_test
@@ -32,7 +32,7 @@ def prepare():
 
 def test(lock, tid, txns=150, txn_prob=None):
     print(f'+ Test_{tid} Begin')
-    driver = Driver(scale=1)
+    driver = Driver(scale=CNT_W)
     do_test(driver, lock, txns, txn_prob)
     print(f'- Test_{tid} Finished')
     driver.delay_close()
@@ -40,25 +40,81 @@ def test(lock, tid, txns=150, txn_prob=None):
 
 def output_result():
     result, new_order_result = analysis()
-    f = open(f'TPCC-Tester/result/statistics_of_five_transactions.txt', 'w')
+
+    total_transactions = 0
+    total_rollbacks = 0
+    statistics_lines = []
+
+    # 计算每个事务的回滚率和总回滚率
     for r in result:
-        f.write(str(
-            r['name'] + ' - ' + '\navg time: ' + str(r['avg']) + '\ntotal: ' + str(r['total']) + '\nsuccess: ' + str(
-                r['success']) + '\n\n'))
-        print(r['name'], ' - ', '\navg time: ', r['avg'], '\ntotal: ', r['total'], '\nsuccess: ', r['success'])
-    f2 = open(f'TPCC-Tester/result/timecost_and_num_of_NewOrders.txt', 'w')
-    for n in new_order_result:
-        f2.write("number: " + str(n[0]) + ", time cost: " + str(n[1]) + "\n")
-    X = np.array([e[1] for e in new_order_result])
-    Y = np.array([e[0] for e in new_order_result])
-    plt.plot(X, Y)
+        failure_count = r['total'] - r['success']
+        rollback_rate = (failure_count / r['total']) * 100
+
+        statistics_lines.append(
+            f"{r['name']} - \navg time: {r['avg']}\ntotal: {r['total']}\nsuccess: {r['success']}\nRollback rate: {rollback_rate:.2f}%\n\n")
+
+        print(
+            f"{r['name']} - \navg time: {r['avg']}\ntotal: {r['total']}\nsuccess: {r['success']}\nRollback rate: {rollback_rate:.2f}%")
+
+        total_transactions += r['total']
+        total_rollbacks += failure_count
+
+    total_rollback_rate = (total_rollbacks / total_transactions) * 100
+    print(f"Total Rollback Rate: {total_rollback_rate:.2f}%")
+
+    # 写入 statistics_of_five_transactions.txt
+    with open('TPCC-Tester/result/statistics_of_five_transactions.txt', 'w') as f:
+        f.writelines(statistics_lines)
+
+    # 处理 new order 结果，写入 timecost_and_num_of_NewOrders.txt
+    new_order_lines = [f"number: {n[0]}, time cost: {n[1]}\n" for n in new_order_result]
+    with open('TPCC-Tester/result/timecost_and_num_of_NewOrders.txt', 'w') as f2:
+        f2.writelines(new_order_lines)
+
+    # 画图并保存图像
+    times = np.array([e[1] for e in new_order_result])
+    numbers = np.array([e[0] for e in new_order_result])
+
+    plt.plot(times, numbers)
     plt.ylabel('Number of New-Orders')
     plt.xlabel('Time unit: second')
-    plt.savefig(f"TPCC-Tester/result/timecost_and_num_of_NewOrders.jpg")
+    plt.savefig('TPCC-Tester/result/timecost_and_num_of_NewOrders.jpg')
     plt.show()
-    os.remove(f'TPCC-Tester/result/rds.db')
+
+    # 删除数据库文件
+    if os.path.exists('TPCC-Tester/result/rds.db'):
+        os.remove('TPCC-Tester/result/rds.db')
+
     # 返回 new order 成功数量
     return result[0]['success']
+
+
+# def output_result():
+#     result, new_order_result = analysis()
+#     f = open(f'TPCC-Tester/result/statistics_of_five_transactions.txt', 'w')
+#     for r in result:
+#         f.write(str(
+#             r['name'] + ' - ' + '\navg time: ' + str(r['avg']) + '\ntotal: ' + str(r['total']) + '\nsuccess: ' + str(
+#                 r['success']) + '\n\n'))
+#         print(r['name'], ' - ', '\navg time: ', r['avg'], '\ntotal: ', r['total'], '\nsuccess: ', r['success'])
+#         # 计算事务回滚率
+#         failure_count = r['total'] - r['success']
+#         rollback_rate = failure_count / r['total'] * 100
+#         print(f"Rollback rate: {rollback_rate:.2f}%")
+#
+#     f2 = open(f'TPCC-Tester/result/timecost_and_num_of_NewOrders.txt', 'w')
+#     for n in new_order_result:
+#         f2.write("number: " + str(n[0]) + ", time cost: " + str(n[1]) + "\n")
+#     X = np.array([e[1] for e in new_order_result])
+#     Y = np.array([e[0] for e in new_order_result])
+#     plt.plot(X, Y)
+#     plt.ylabel('Number of New-Orders')
+#     plt.xlabel('Time unit: second')
+#     plt.savefig(f"TPCC-Tester/result/timecost_and_num_of_NewOrders.jpg")
+#     plt.show()
+#     os.remove(f'TPCC-Tester/result/rds.db')
+#     # 返回 new order 成功数量
+#     return result[0]['success']
 
 
 # useage: python TPCC-Tester/runner.py --prepare --thread 8 --rw 150 --ro 150 --analyze
@@ -80,6 +136,9 @@ def main():
         prepare()
         print(f'load time: {time.time() - lt1}')
 
+    t1 = 0
+    t2 = 0
+    t3 = 0
     if thread_num:
         lock = Lock()
         t1 = time.time()
@@ -103,7 +162,7 @@ def main():
                 process_list[i].join()
         t3 = time.time()
 
-    driver = Driver(scale=1)
+    driver = Driver(scale=CNT_W)
     driver.consistency_check()
 
     if args.analyze:

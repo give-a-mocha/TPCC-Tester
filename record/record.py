@@ -2,11 +2,11 @@ import sqlite3
 
 NewOrder = 0
 Payment = 1
-OrderStatus = 2
-StockLevel = 3
-Delivery = 4
-name = {NewOrder: 'New Order', Payment: 'Payment', OrderStatus: 'OrderStatus', StockLevel: 'StockLevel',
-        Delivery: 'Delivery'}
+Delivery = 2
+OrderStatus = 3
+StockLevel = 4
+name = {NewOrder: 'New Order', Payment: 'Payment', Delivery: 'Delivery', OrderStatus: 'OrderStatus',
+        StockLevel: 'StockLevel'}
 
 
 def build_db():
@@ -15,8 +15,8 @@ def build_db():
     cursor.execute('create table new_order_txn(no integer, time real);')
     cursor.execute('create table test_result(txn integer, avg real, total integer, success integer);')
     cursor.executemany('insert into test_result(txn, avg, total, success) values(?,?,?,?);',
-                       [(NewOrder, 0, 0, 0), (Payment, 0, 0, 0), (OrderStatus, 0, 0, 0), (StockLevel, 0, 0, 0),
-                        (Delivery, 0, 0, 0)])
+                       [(NewOrder, 0, 0, 0), (Payment, 0, 0, 0), (Delivery, 0, 0, 0), (OrderStatus, 0, 0, 0),
+                        (StockLevel, 0, 0, 0)])
     cursor.execute('insert into new_order_txn(no, time) values(?,?);', (0, 0))
     conn.commit()
     conn.close()
