@@ -155,8 +155,8 @@ class Driver:
                     max_no_o_id = eval(max_no_o_id)
 
                     if d_next_o_id - 1 != max_o_id or d_next_o_id - 1 != max_no_o_id:
-                        print(f"consistency check error in: {w_id}, {d_id}")
-                        # return
+                        print(
+                            f"d_next_o_id={d_next_o_id}, max(o_id)={max_o_id}, max(no_o_id)={max_no_o_id} when d_id={d_id} and w_id={w_id}")
 
             print("consistency check for district, orders and new_orders pass!")
 
@@ -187,9 +187,8 @@ class Driver:
                     min_no_o_id = eval(res[0][0])
 
                     if num_no_o_id != max_no_o_id - min_no_o_id + 1:
-                        print(f"consistency check error in: {w_id}, {d_id}")
-                        print(f"Unexpected orders: {num_no_o_id}, {max_no_o_id}, {min_no_o_id}")
-                        # return
+                        print(
+                            f"count(no_o_id)={num_no_o_id}, max(no_o_id)={max_no_o_id}, min(no_o_id)={min_no_o_id} when d_id={d_id} and w_id={w_id}")
 
             print("consistency check for new_orders pass!")
 
@@ -212,8 +211,8 @@ class Driver:
                     num_ol_o_id = eval(res[0][0])
 
                     if sum_o_ol_cnt != num_ol_o_id:
-                        print(f"consistency check error in: {w_id}, {d_id}")
-                        # return
+                        print(
+                            f"sum(o_ol_cnt)={sum_o_ol_cnt}, count(ol_o_id)={num_ol_o_id} when d_id={d_id} and w_id={w_id}")
 
             print("consistency check for orders and order_line pass!")
 

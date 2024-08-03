@@ -48,7 +48,7 @@ def output_result():
     # 计算每个事务的回滚率和总回滚率
     for r in result:
         failure_count = r['total'] - r['success']
-        rollback_rate = (failure_count / r['total']) * 100
+        rollback_rate = (failure_count / r['total']) * 100 if r['total'] > 0 else 0
 
         statistics_lines.append(
             f"{r['name']} - \navg time: {r['avg']}\ntotal: {r['total']}\nsuccess: {r['success']}\nRollback rate: {rollback_rate:.2f}%\n\n")
@@ -59,7 +59,7 @@ def output_result():
         total_transactions += r['total']
         total_rollbacks += failure_count
 
-    total_rollback_rate = (total_rollbacks / total_transactions) * 100
+    total_rollback_rate = (total_rollbacks / total_transactions) * 100 if total_transactions > 0 else 0
     print(f"Total Rollback Rate: {total_rollback_rate:.2f}%")
 
     # 写入 statistics_of_five_transactions.txt
@@ -87,34 +87,6 @@ def output_result():
 
     # 返回 new order 成功数量
     return result[0]['success']
-
-
-# def output_result():
-#     result, new_order_result = analysis()
-#     f = open(f'TPCC-Tester/result/statistics_of_five_transactions.txt', 'w')
-#     for r in result:
-#         f.write(str(
-#             r['name'] + ' - ' + '\navg time: ' + str(r['avg']) + '\ntotal: ' + str(r['total']) + '\nsuccess: ' + str(
-#                 r['success']) + '\n\n'))
-#         print(r['name'], ' - ', '\navg time: ', r['avg'], '\ntotal: ', r['total'], '\nsuccess: ', r['success'])
-#         # 计算事务回滚率
-#         failure_count = r['total'] - r['success']
-#         rollback_rate = failure_count / r['total'] * 100
-#         print(f"Rollback rate: {rollback_rate:.2f}%")
-#
-#     f2 = open(f'TPCC-Tester/result/timecost_and_num_of_NewOrders.txt', 'w')
-#     for n in new_order_result:
-#         f2.write("number: " + str(n[0]) + ", time cost: " + str(n[1]) + "\n")
-#     X = np.array([e[1] for e in new_order_result])
-#     Y = np.array([e[0] for e in new_order_result])
-#     plt.plot(X, Y)
-#     plt.ylabel('Number of New-Orders')
-#     plt.xlabel('Time unit: second')
-#     plt.savefig(f"TPCC-Tester/result/timecost_and_num_of_NewOrders.jpg")
-#     plt.show()
-#     os.remove(f'TPCC-Tester/result/rds.db')
-#     # 返回 new order 成功数量
-#     return result[0]['success']
 
 
 # useage: python TPCC-Tester/runner.py --prepare --thread 8 --rw 150 --ro 150 --analyze
