@@ -137,8 +137,10 @@ def main():
     driver = Driver(scale=CNT_W)
     driver.consistency_check()
 
+    new_order_success = output_result()
+    driver.consistency_check2(new_order_success)
+
     if args.analyze:
-        new_order_success = output_result()
         print(f'total time of rw txns: {t2 - t1}')
         print(f'total time of ro txns: {t3 - t2}')
         print(f'total time: {t3 - t1}')

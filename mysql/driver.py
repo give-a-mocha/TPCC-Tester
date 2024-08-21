@@ -220,6 +220,23 @@ class Driver:
             print(f"Exception occurred in w_id: {w_id}, d_id: {d_id}")
             print(e)
 
+    def consistency_check2(self, cnt_new_orders):
+        print("consistency checking 2...")
+        try:
+            res = select(client=self._client,
+                         table=ORDERS,
+                         col=(COUNT(alias='count_orders'),),
+                         )
+            cnt_orders = eval(res[0][0])
+            if cnt_orders == CNT_ORDERS + cnt_new_orders:
+                print("all pass!")
+                return True
+            print(
+                f"count(*)={cnt_orders}, count(new_orders)={cnt_new_orders} when origin orders={CNT_ORDERS}")
+        except Exception as e:
+            print(e)
+        print("consistency checking 2 error!")
+
     def do_new_order(self, w_id, d_id, c_id, ol_i_id, ol_supply_w_id, ol_quantity):
         res = []
         ol_cnt = len(ol_i_id)
@@ -406,7 +423,7 @@ class Driver:
             res = select(client=self._client,
                          table=DISTRICT,
                          col=(D_NAME, D_STREET_1, D_STREET_2, D_CITY, D_STATE, D_ZIP, D_YTD),
-                         where=(D_ID, eq, d_id))
+                         where=[(D_W_ID, eq, w_id), (D_ID, eq, d_id)])
             if res == SQLState.ABORT:
                 return SQLState.ABORT
             d_name, d_street_1, d_street_2, d_city, d_state, d_zip, d_ytd = res[0]
