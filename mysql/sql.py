@@ -55,7 +55,7 @@ def select(client, table, col=ALL, where=False, order_by=False, asc=False):
 
     if result.startswith('abort'):
         return SQLState.ABORT
-    # print(result)
+    print(result)
 
     if result.startswith('Error') or result == None or result == '':
         return
@@ -67,10 +67,25 @@ def select(client, table, col=ALL, where=False, order_by=False, asc=False):
         real_col_num = num_of_cols[table]
     else:
         real_col_num = len(col)
-    ## 2. 跳过第一行的“｜”    
-    shuxian_idx = result.find('|')
-    for i in range(real_col_num):
-        shuxian_idx = result.find('|', shuxian_idx + 1)
+    '''
+    +------------------+
+    |               id |
+    +------------------+
+    |                1 |
+    |                2 |
+    +------------------+
+    '''
+    ## 2. 跳过表头部分 
+    # 找三次 '\n' 跳过前3行：顶部边框、列名行、表头下方边框
+    shuxian_idx = result.find('\n')  # 第1个换行符
+    shuxian_idx = result.find('\n', shuxian_idx + 1)  # 第2个换行符
+    shuxian_idx = result.find('\n', shuxian_idx + 1)  # 第3个换行符
+
+    if(result.find('|', shuxian_idx + 1) == -1):
+        print("select No data found.")
+        return []  # 如果没有数据行，直接返回空列表
+    
+    # 现在 shuxian_idx 指向第3行末尾，数据行从下一行开始
     ## 3. 初始化结果集
     results_allline = []
     result_oneline = []
