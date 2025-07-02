@@ -55,7 +55,7 @@ def select(client, table, col=ALL, where=False, order_by=False, asc=False):
 
     if result.startswith('abort'):
         return SQLState.ABORT
-    print(result)
+    # print(result)
 
     if result.startswith('Error') or result == None or result == '':
         return
