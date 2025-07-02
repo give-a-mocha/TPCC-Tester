@@ -7,7 +7,7 @@ from multiprocessing import Process, Lock
 import matplotlib.pyplot as plt
 import numpy as np
 
-from mysql.driver import CNT_W, Driver
+from mysql.driver import Driver
 from record.record import analysis
 from record.record import build_db
 from tester import do_test
@@ -30,9 +30,9 @@ def prepare():
     driver.delay_close()
 
 
-def test(lock, tid, txns=150, txn_prob=None):
+def test(lock, tid, scale=1, txns=150, txn_prob=None, warehouses=1):
     print(f'+ Test_{tid} Begin')
-    driver = Driver(scale=CNT_W)
+    driver = Driver(scale=scale)
     do_test(driver, lock, txns, txn_prob)
     print(f'- Test_{tid} Finished')
     driver.delay_close()
@@ -97,9 +97,11 @@ def main():
     parser.add_argument('--rw', type=int, help='Read write transaction phase time')
     parser.add_argument('--ro', type=int, help='Read only transaction phase time')
     parser.add_argument('--thread', type=int, help='Thread number')
+    parser.add_argument('--w', type=int, required=True, help='Number of warehouses (CNT_W)')
 
     args = parser.parse_args()
     thread_num = args.thread
+    warehouses = args.w
 
     clean()
 
@@ -118,7 +120,7 @@ def main():
         if args.rw:
             for i in range(thread_num):
                 process_list.append(
-                    Process(target=test, args=(lock, i + 1, args.rw, [10 / 23, 10 / 23, 1 / 23, 1 / 23, 1 / 23])))
+                    Process(target=test, args=(lock, i + 1, warehouses, args.rw, [10 / 23, 10 / 23, 1 / 23, 1 / 23, 1 / 23])))
                 process_list[i].start()
 
             for i in range(thread_num):
@@ -127,14 +129,14 @@ def main():
         process_list = []
         if args.ro:
             for i in range(thread_num):
-                process_list.append(Process(target=test, args=(lock, i + 1, args.ro, [0, 0, 0, 0.5, 0.5])))
+                process_list.append(Process(target=test, args=(lock, i + 1, warehouses, args.ro, [0, 0, 0, 0.5, 0.5])))
                 process_list[i].start()
 
             for i in range(thread_num):
                 process_list[i].join()
         t3 = time.time()
 
-    driver = Driver(scale=CNT_W)
+    driver = Driver(scale=warehouses)
     driver.consistency_check()
 
     new_order_success = output_result()

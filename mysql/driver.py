@@ -5,7 +5,8 @@ from db.rmdb_client import Client
 from mysql.sql import *
 from util import *
 
-CNT_W = 50
+# 初始化常量
+CNT_W = 1
 CNT_ITEM = 100000
 CNT_STOCK = CNT_W * 100000
 CNT_DISTRICT = CNT_W * 10
@@ -14,6 +15,9 @@ CNT_HISTORY = CNT_W * 10 * 3000
 CNT_ORDERS = CNT_W * 10 * 3000
 CNT_NEW_ORDERS = CNT_W * 10 * 900
 CNT_ORDER_LINE = CNT_ORDERS * 10
+
+W_ID_MAX = CNT_W + 1
+D_ID_MAX = 11
 
 # 定义每个表的参数
 tables_info = [
@@ -28,13 +32,37 @@ tables_info = [
     (STOCK, 'count_stock', CNT_STOCK, 'count_stock')
 ]
 
-W_ID_MAX = 51
-D_ID_MAX = 11
+def get_tables_info():
+    """动态获取表信息，使用当前的计数值"""
+    return [
+        (WAREHOUSE, 'count_warehouse', CNT_W, 'count_warehouse'),
+        (DISTRICT, 'count_district', CNT_DISTRICT, 'count_district'),
+        (CUSTOMER, 'count_customer', CNT_CUSTOMER, 'count_customer'),
+        (HISTORY, 'count_history', CNT_HISTORY, 'count_history'),
+        (NEW_ORDERS, 'count_new_orders', CNT_NEW_ORDERS, 'count_new_orders'),
+        (ORDERS, 'count_orders', CNT_ORDERS, 'count_orders'),
+        (ORDER_LINE, 'count_order_line', CNT_ORDER_LINE, 'count_order_line'),
+        (ITEM, 'count_item', CNT_ITEM, 'count_item'),
+        (STOCK, 'count_stock', CNT_STOCK, 'count_stock')
+    ]
 
 
 class Driver:
     def __init__(self, scale):
         self._scale = scale
+        # 根据传入的仓库数量设置相关计数
+        global CNT_W, CNT_STOCK, CNT_DISTRICT, CNT_CUSTOMER, CNT_HISTORY, CNT_ORDERS, CNT_NEW_ORDERS, CNT_ORDER_LINE, W_ID_MAX, tables_info
+        CNT_W = scale
+        CNT_STOCK = CNT_W * 100000
+        CNT_DISTRICT = CNT_W * 10
+        CNT_CUSTOMER = CNT_W * 10 * 3000
+        CNT_HISTORY = CNT_W * 10 * 3000
+        CNT_ORDERS = CNT_W * 10 * 3000
+        CNT_NEW_ORDERS = CNT_W * 10 * 900
+        CNT_ORDER_LINE = CNT_ORDERS * 10
+        W_ID_MAX = CNT_W + 1
+        tables_info = get_tables_info()
+        
         self._client = Client()
         self._flag = True
         # self._delivery_q = Queue()
