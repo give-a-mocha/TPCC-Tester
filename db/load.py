@@ -337,7 +337,7 @@ def load_ord(min_ware, max_ware, output_dir="."):
                         ol_amount = RandomNumber(10, 10000) / 100.0 if o_id <= 2100 else 0.00 # Amount is 0 for undelivered
                         ol_dist_info = MakeAlphaString(24, 24)
 
-                        ol_delivery_d = gettimestamp() if o_id <= 2100 else "" # Delivery date is empty for undelivered
+                        ol_delivery_d = gettimestamp() if o_id <= 2100 else "null" # Delivery date is empty for undelivered
 
                         orl_writer.writerow([ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info])
 
