@@ -14,8 +14,8 @@ from tester import do_test
 
 
 def clean():
-    shutil.rmtree('TPCC-Tester/result')
-    os.mkdir('TPCC-Tester/result')
+    shutil.rmtree('TPCC-Tester/result', ignore_errors=True)
+    os.mkdir('TPCC-Tester/result', exist_ok=True)
     build_db()
 
 
