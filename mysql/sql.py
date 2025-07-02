@@ -82,7 +82,8 @@ def select(client, table, col=ALL, where=False, order_by=False, asc=False):
     shuxian_idx = result.find('\n', shuxian_idx + 1)  # 第3个换行符
 
     if(result.find('|', shuxian_idx + 1) == -1):
-        print("select No data found.")
+        # print(sql)
+        # print("select No data found.")
         return []  # 如果没有数据行，直接返回空列表
     
     # 现在 shuxian_idx 指向第3行末尾，数据行从下一行开始
