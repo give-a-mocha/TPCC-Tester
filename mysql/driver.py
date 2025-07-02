@@ -216,6 +216,16 @@ class Driver:
         print("consistency checking 2 error!")
 
     def do_new_order(self, w_id, d_id, c_id, ol_i_id, ol_supply_w_id, ol_quantity):
+        '''
+        功能: 处理新订单创建 三个阶段:
+
+        Phase 1: 获取仓库税率、区域税率和下一个订单ID
+        Phase 2: 插入 ORDERS 和 NEW_ORDERS 记录
+        Phase 3: 处理每个订单行项目
+        查询商品信息 (ITEM 表)
+        更新库存信息 (STOCK 表)
+        插入订单行 (ORDER_LINE 表)
+        '''
         res = []
         ol_cnt = len(ol_i_id)
         ol_amount = 0
@@ -371,8 +381,16 @@ class Driver:
             return SQLState.ABORT
         # print('- New Order')
         return SQLState.SUCCESS
-
     def do_payment(self, w_id, d_id, c_w_id, c_d_id, c_query, h_amount):
+        '''
+        功能: 处理客户付款 主要步骤:
+        更新仓库年度销售额 (WAREHOUSE.W_YTD)
+        更新区域年度销售额 (DISTRICT.D_YTD)
+        根据客户ID或姓名查找客户
+        更新客户余额和付款信息
+        如果是信用不良客户，更新客户数据
+        插入历史记录 (HISTORY 表)
+        '''
         c_balance = 0
         c_ytd_payment = 0
         c_payment_cnt = 0
@@ -502,6 +520,13 @@ class Driver:
         return SQLState.SUCCESS
 
     def do_order_status(self, w_id, d_id, c_query):
+        '''
+        功能: 查询客户最新订单状态 主要步骤:
+
+        根据客户ID或姓名查找客户信息
+        查询该客户的最新订单
+        查询订单的所有行项目详情
+        '''
         c_id = 0
         if self._client.send_cmd("BEGIN;") == SQLState.ABORT:
             return SQLState.ABORT
@@ -581,6 +606,16 @@ class Driver:
         return SQLState.SUCCESS
 
     def do_delivery(self, w_id, o_carrier_id):
+        '''
+        功能: 批量处理订单发货 主要步骤:
+
+        遍历所有10个区域 (1-10)
+        对每个区域找到最小的新订单ID
+        从 NEW_ORDERS 表删除该订单
+        更新 ORDERS 表的承运人ID
+        更新 ORDER_LINE 表的发货日期
+        更新客户余额和发货计数
+        '''
         t1 = time.time()
         if self._client.send_cmd("BEGIN;") == SQLState.ABORT:
             return SQLState.ABORT
@@ -692,6 +727,13 @@ class Driver:
         return SQLState.SUCCESS
 
     def do_stock_level(self, w_id, d_id, level):
+        '''
+        功能: 查询库存不足的商品数量 主要步骤:
+
+        获取区域的下一个订单ID
+        查询最近20个订单的所有订单行
+        统计库存量低于阈值的商品数量
+        '''
         if self._client.send_cmd("BEGIN;") == SQLState.ABORT:
             return SQLState.ABORT
         # print('+ Stock Level')
