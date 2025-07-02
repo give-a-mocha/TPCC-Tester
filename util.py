@@ -2,6 +2,8 @@ import datetime
 import random
 import string
 
+from config import config
+
 # _names = ['BAR', 'OUGHT', 'ABLE', 'PRI', 'PRES', 'ESE', 'ANTI', 'CALLY', 'ATION', 'EING']
 _names = ['BARR', 'OUGH', 'ABLE', 'PRII', 'PRES', 'ESEE', 'ANTI', 'CALL', 'ATIO', 'EING']
 _C_LOAD = 117
@@ -35,7 +37,7 @@ def rand_perm(max):
     random.shuffle(l)
     return l
 
-
+# 生成一个在 [x, y-1] 范围内的非均匀分布的随机数，而不是普通的均匀分布随机数。
 def NURand(A, x, y, C):
     return (((random.randrange(0, A) | random.randrange(x, y)) + C) % (y - x)) + x  # y-1 = y
 
@@ -92,11 +94,11 @@ def get_ol_quantity(ol_cnt):
 
 
 def get_w_id():
-    return random.randrange(1, 51)
+    return random.randrange(1, config.W_ID_MAX)
 
 
 def get_d_id():
-    return random.randrange(1, 11)
+    return random.randrange(1, config.D_ID_MAX)
 
 
 # 这个函数的目的是在某种交易模拟场景中，决定客户所属的 warehouse 和 district：

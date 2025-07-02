@@ -4,65 +4,14 @@ import time
 from db.rmdb_client import Client
 from mysql.sql import *
 from util import *
-
-# 初始化常量
-CNT_W = 1
-CNT_ITEM = 100000
-CNT_STOCK = CNT_W * 100000
-CNT_DISTRICT = CNT_W * 10
-CNT_CUSTOMER = CNT_W * 10 * 3000
-CNT_HISTORY = CNT_W * 10 * 3000
-CNT_ORDERS = CNT_W * 10 * 3000
-CNT_NEW_ORDERS = CNT_W * 10 * 900
-CNT_ORDER_LINE = CNT_ORDERS * 10
-
-W_ID_MAX = CNT_W + 1
-D_ID_MAX = 11
-
-# 定义每个表的参数
-tables_info = [
-    (WAREHOUSE, 'count_warehouse', CNT_W, 'count_warehouse'),
-    (DISTRICT, 'count_district', CNT_DISTRICT, 'count_district'),
-    (CUSTOMER, 'count_customer', CNT_CUSTOMER, 'count_customer'),
-    (HISTORY, 'count_history', CNT_HISTORY, 'count_history'),
-    (NEW_ORDERS, 'count_new_orders', CNT_NEW_ORDERS, 'count_new_orders'),
-    (ORDERS, 'count_orders', CNT_ORDERS, 'count_orders'),
-    (ORDER_LINE, 'count_order_line', CNT_ORDER_LINE, 'count_order_line'),
-    (ITEM, 'count_item', CNT_ITEM, 'count_item'),
-    (STOCK, 'count_stock', CNT_STOCK, 'count_stock')
-]
-
-def get_tables_info():
-    """动态获取表信息，使用当前的计数值"""
-    return [
-        (WAREHOUSE, 'count_warehouse', CNT_W, 'count_warehouse'),
-        (DISTRICT, 'count_district', CNT_DISTRICT, 'count_district'),
-        (CUSTOMER, 'count_customer', CNT_CUSTOMER, 'count_customer'),
-        (HISTORY, 'count_history', CNT_HISTORY, 'count_history'),
-        (NEW_ORDERS, 'count_new_orders', CNT_NEW_ORDERS, 'count_new_orders'),
-        (ORDERS, 'count_orders', CNT_ORDERS, 'count_orders'),
-        (ORDER_LINE, 'count_order_line', CNT_ORDER_LINE, 'count_order_line'),
-        (ITEM, 'count_item', CNT_ITEM, 'count_item'),
-        (STOCK, 'count_stock', CNT_STOCK, 'count_stock')
-    ]
+from config import config
 
 
 class Driver:
     def __init__(self, scale):
-        self._scale = scale
-        # 根据传入的仓库数量设置相关计数
-        global CNT_W, CNT_STOCK, CNT_DISTRICT, CNT_CUSTOMER, CNT_HISTORY, CNT_ORDERS, CNT_NEW_ORDERS, CNT_ORDER_LINE, W_ID_MAX, tables_info
-        CNT_W = scale
-        CNT_STOCK = CNT_W * 100000
-        CNT_DISTRICT = CNT_W * 10
-        CNT_CUSTOMER = CNT_W * 10 * 3000
-        CNT_HISTORY = CNT_W * 10 * 3000
-        CNT_ORDERS = CNT_W * 10 * 3000
-        CNT_NEW_ORDERS = CNT_W * 10 * 900
-        CNT_ORDER_LINE = CNT_ORDERS * 10
-        W_ID_MAX = CNT_W + 1
-        tables_info = get_tables_info()
+        from config import set_warehouse_count
         
+        self._scale = scale    
         self._client = Client()
         self._flag = True
         # self._delivery_q = Queue()
@@ -132,6 +81,7 @@ class Driver:
     def count_star(self):
         print("Count star...")
         # 遍历每个表的信息并进行检查
+        tables_info = config.get_tables_info()
         for table, count_as, expected_count, count_type in tables_info:
             self.count_and_check(self._client, table, count_as, expected_count, count_type)
 
@@ -142,8 +92,8 @@ class Driver:
         d_id = 0
 
         try:
-            for w_id in range(1, W_ID_MAX):
-                for d_id in range(1, D_ID_MAX):
+            for w_id in range(1, config.W_ID_MAX):
+                for d_id in range(1, config.D_ID_MAX):
                     res = select(client=self._client,
                                  table=DISTRICT,
                                  col=(D_NEXT_O_ID,),  # 加逗号，否则会被认为是字符串，而不是元组
@@ -188,8 +138,8 @@ class Driver:
 
             print("consistency check for district, orders and new_orders pass!")
 
-            for w_id in range(1, W_ID_MAX):
-                for d_id in range(1, D_ID_MAX):
+            for w_id in range(1, config.W_ID_MAX):
+                for d_id in range(1, config.D_ID_MAX):
                     res = select(client=self._client,
                                  table=NEW_ORDERS,
                                  col=(COUNT(NO_O_ID),),
@@ -220,8 +170,8 @@ class Driver:
 
             print("consistency check for new_orders pass!")
 
-            for w_id in range(1, W_ID_MAX):
-                for d_id in range(1, D_ID_MAX):
+            for w_id in range(1, config.W_ID_MAX):
+                for d_id in range(1, config.D_ID_MAX):
                     res = select(client=self._client,
                                  table=ORDERS,
                                  col=(SUM(O_OL_CNT),),
@@ -256,11 +206,11 @@ class Driver:
                          col=(COUNT(alias='count_orders'),),
                          )
             cnt_orders = eval(res[0][0])
-            if cnt_orders == CNT_ORDERS + cnt_new_orders:
+            if cnt_orders == config.CNT_ORDERS + cnt_new_orders:
                 print("all pass!")
                 return True
             print(
-                f"count(*)={cnt_orders}, count(new_orders)={cnt_new_orders} when origin orders={CNT_ORDERS}")
+                f"count(*)={cnt_orders}, count(new_orders)={cnt_new_orders} when origin orders={config.CNT_ORDERS}")
         except Exception as e:
             print(e)
         print("consistency checking 2 error!")

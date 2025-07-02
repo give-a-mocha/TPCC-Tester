@@ -12,6 +12,9 @@ from record.record import analysis
 from record.record import build_db
 from tester import do_test
 
+from config import config
+from config import set_warehouse_count
+
 
 def clean():
     shutil.rmtree('TPCC-Tester/result', ignore_errors=True)
@@ -20,7 +23,7 @@ def clean():
 
 
 def prepare():
-    driver = Driver(scale=1)
+    driver = Driver(config.CNT_W)
     driver.all_in_load()  # loading 阶段
     driver.count_star()
     driver.consistency_check()  # 一致性校验
@@ -30,9 +33,9 @@ def prepare():
     driver.delay_close()
 
 
-def test(lock, tid, scale=1, txns=150, txn_prob=None, warehouses=1):
+def test(lock, tid, txns=150, txn_prob=None, warehouses=1):
     print(f'+ Test_{tid} Begin')
-    driver = Driver(scale=scale)
+    driver = Driver(scale=config.CNT_W)
     do_test(driver, lock, txns, txn_prob)
     print(f'- Test_{tid} Finished')
     driver.delay_close()
@@ -101,7 +104,7 @@ def main():
 
     args = parser.parse_args()
     thread_num = args.thread
-    warehouses = args.w
+    set_warehouse_count(args.w)
 
     clean()
 
@@ -120,7 +123,7 @@ def main():
         if args.rw:
             for i in range(thread_num):
                 process_list.append(
-                    Process(target=test, args=(lock, i + 1, warehouses, args.rw, [10 / 23, 10 / 23, 1 / 23, 1 / 23, 1 / 23])))
+                    Process(target=test, args=(lock, i + 1, args.rw, [10 / 23, 10 / 23, 1 / 23, 1 / 23, 1 / 23])))
                 process_list[i].start()
 
             for i in range(thread_num):
@@ -129,14 +132,14 @@ def main():
         process_list = []
         if args.ro:
             for i in range(thread_num):
-                process_list.append(Process(target=test, args=(lock, i + 1, warehouses, args.ro, [0, 0, 0, 0.5, 0.5])))
+                process_list.append(Process(target=test, args=(lock, i + 1, args.ro, [0, 0, 0, 0.5, 0.5])))
                 process_list[i].start()
 
             for i in range(thread_num):
                 process_list[i].join()
         t3 = time.time()
 
-    driver = Driver(scale=warehouses)
+    driver = Driver(scale=config.CNT_W)
     driver.consistency_check()
 
     new_order_success = output_result()
