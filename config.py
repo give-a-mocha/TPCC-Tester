@@ -21,7 +21,7 @@ class Config:
     
     def get_tables_info(self):
         """获取表信息列表"""
-        from mysql.sql import (WAREHOUSE, DISTRICT, CUSTOMER, HISTORY, 
+        from db.table_layouts import (WAREHOUSE, DISTRICT, CUSTOMER, HISTORY, 
                               NEW_ORDERS, ORDERS, ORDER_LINE, ITEM, STOCK)
         
         return [

@@ -1,8 +1,14 @@
 import time
+import random
 
 from mysql.driver import SQLState
-from record.record import *
-from util import *
+from record.record import (
+    put_txn, put_new_order
+)
+from util import (
+    get_w_id, get_d_id, get_c_id, get_ol_i_id, get_ol_supply_w_id,
+    get_ol_quantity, get_c_w_id_d_id, query_cus_by, get_h_amount, get_o_carrier_id
+)
 
 
 # 输入一个列表，其中每项代表选择该项目的概率，返回选择的项目的下标
@@ -31,7 +37,7 @@ def do_test(driver, lock, txns, txn_prob=None):
     o_carrier_id = 0
     c_w_id = 0
     c_d_id = 0
-    h_amount = 0
+    h_amount = 0.0
     query_cus = 0
     threshold = 0
 

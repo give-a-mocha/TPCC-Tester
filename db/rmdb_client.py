@@ -1,6 +1,8 @@
 import readline
 import socket
 
+from typing import Optional
+
 
 class Client:
     MAX_MEM_BUFFER_SIZE = 8192
@@ -8,7 +10,7 @@ class Client:
     HOST = '127.0.0.1'
     sockfd = None
 
-    def __init__(self) -> None:
+    def __init__(self):
         readline.parse_and_bind("'\e[A': history-search-backward")
         readline.parse_and_bind("'\e[B': history-search-forward")
 
@@ -32,7 +34,7 @@ class Client:
     def __is_exit_command(self, cmd):
         return cmd in ["exit", "exit;", "bye", "bye;"]
 
-    def __init_unix_sock(self, unix_sock_path) -> socket:
+    def __init_unix_sock(self, unix_sock_path) -> Optional[socket.socket]:
         try:
             sockfd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             sockfd.connect(unix_sock_path)
@@ -41,7 +43,7 @@ class Client:
             print(f"failed to create unix socket. {str(e)}")
             return None
 
-    def __init_tcp_sock(self, server_host, server_port):
+    def __init_tcp_sock(self, server_host, server_port) -> Optional[socket.socket]:
         try:
             host = socket.gethostbyname(server_host)
             sockfd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -56,6 +58,8 @@ class Client:
     def send_cmd(self, cmd):
         # send 单条sql命令
         if cmd:
+            if self.sockfd is None:
+                raise RuntimeError("Socket connection is not established")
             try:
                 self.sockfd.sendall(cmd.encode())
                 recv_buf = self.sockfd.recv(self.MAX_MEM_BUFFER_SIZE)
@@ -71,6 +75,9 @@ class Client:
     def start_shell_client(self):
         # 启动shell client, 在命令行中输入sql命令那种形式
         # while 循环反复获取input
+        if self.sockfd is None:
+            raise RuntimeError("Socket connection is not established")
+        
         while True:
             command = input("Rucbase_py> ")
 
@@ -99,6 +106,8 @@ class Client:
         # self.sockfd.close()
 
     def close(self):
+        if self.sockfd is None:
+            raise RuntimeError("Socket connection is not established")
         self.sockfd.close()
 
 

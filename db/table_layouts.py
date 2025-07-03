@@ -1,3 +1,4 @@
+from typing import Optional, Dict
 # WAREHOUSE Table Layout
 WAREHOUSE = 'warehouse'
 W_ID = 'w_id'
@@ -118,7 +119,7 @@ I_PRICE = 'i_price'
 I_DATA = 'i_data'
 
 
-def COUNT(x='*', alias=None):
+def COUNT(x:str = '*', alias:Optional[str] = None) -> str:
     """
     Constructs a SQL MIN function with an optional alias.
     """
@@ -128,7 +129,7 @@ def COUNT(x='*', alias=None):
     return query
 
 
-def MIN(x='*', alias=None):
+def MIN(x:str = '*', alias:Optional[str] = None) -> str:
     """
     Constructs a SQL MIN function with an optional alias.
     """
@@ -138,7 +139,7 @@ def MIN(x='*', alias=None):
     return query
 
 
-def MAX(x='*', alias=None):
+def MAX(x:str = '*', alias:Optional[str] = None) -> str:
     """
     Constructs a SQL MAX function with an optional alias.
     """
@@ -148,7 +149,7 @@ def MAX(x='*', alias=None):
     return query
 
 
-def SUM(x='*', alias=None):
+def SUM(x:str = '*', alias:Optional[str] = None) -> str:
     """
     Constructs a SQL SUM function with an optional alias.
     """
@@ -158,16 +159,20 @@ def SUM(x='*', alias=None):
     return query
 
 
-num_of_cols = {WAREHOUSE: 9,
-               STOCK: 17,
-               DISTRICT: 11,
-               CUSTOMER: 21,
-               HISTORY: 8,
-               ORDERS: 8,
-               ORDER_LINE: 10,
-               NEW_ORDERS: 3,
-               ITEM: 5}
-population = {ITEM: 100000,
-              STOCK: 100000,
-              CUSTOMER: 3000,
-              DISTRICT: 10}
+num_of_cols:Dict[str, int] = {
+    WAREHOUSE: 9,
+    STOCK: 17,
+    DISTRICT: 11,
+    CUSTOMER: 21,
+    HISTORY: 8,
+    ORDERS: 8,
+    ORDER_LINE: 10,
+    NEW_ORDERS: 3,
+    ITEM: 5
+}
+population:Dict[str, int] = {
+    ITEM: 100000,
+    STOCK: 100000,
+    CUSTOMER: 3000,
+    DISTRICT: 10
+}
