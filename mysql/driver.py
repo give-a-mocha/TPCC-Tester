@@ -394,7 +394,7 @@ class Driver:
         # w_ytd = eval(w_ytd)
         if update(client=self._client,
                   table=WAREHOUSE,
-                  row=(W_YTD, W_YTD + '+' + str(h_amount)),
+                  row=(W_YTD, W_YTD + ' + ' + str(h_amount)),
                   where=(W_ID, eq, w_id)) == SQLState.ABORT:
             return SQLState.ABORT
         try:
@@ -410,7 +410,7 @@ class Driver:
         # d_ytd = eval(d_ytd)
         if update(client=self._client,
                   table=DISTRICT,
-                  row=(D_YTD, D_YTD + '+' + str(h_amount)),
+                  row=(D_YTD, D_YTD + ' + ' + str(h_amount)),
                   where=[(D_W_ID, eq, w_id), (D_ID, eq, d_id)]) == SQLState.ABORT:
             return SQLState.ABORT
 

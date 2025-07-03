@@ -42,7 +42,7 @@ def select(client, table, col=ALL, where=False, order_by=False, asc=False):
 
     table = ','.join(table)
 
-    gen = lambda ele: str(ele[0]) + str(ele[1]) + '%s'
+    gen = lambda ele: str(ele[0]) + ' ' + str(ele[1]) + ' %s'
     where = ' '.join([WHERE, AND.join([gen(ele) for ele in where])]) if where else ''
     order_by = ' '.join([ORDER_BY, order_by, ASC if asc else DESC]) if order_by else ''
     sql = ' '.join([SELECT, ','.join(col), FROM, table, where, order_by, ';'])
@@ -133,9 +133,9 @@ def update(client, table, row, where=False):
     if type(where) != list:
         where = [where]
     param = [ele[-1] for ele in where]
-    gen = lambda ele: str(ele[0]) + str(ele[1]) + '%s'
+    gen = lambda ele: str(ele[0]) + ' ' + str(ele[1]) + ' %s'
     where = ' '.join([WHERE, AND.join([gen(ele) for ele in where])]) if where else ''
-    var = [e[0] + '=%s' for e in row]
+    var = [e[0] + ' = %s' for e in row]
     val = [e[1] for e in row]
 
     sql = ' '.join([UPDATE, table, SET, ','.join(var), where, ';'])
@@ -154,7 +154,7 @@ def delete(client, table, where):
     if type(where) != list:
         where = [where]
     param = [ele[-1] for ele in where]
-    gen = lambda ele: str(ele[0]) + str(ele[1]) + '%s'
+    gen = lambda ele: str(ele[0]) + ' ' + str(ele[1]) + ' %s'
     where = ' '.join([WHERE, AND.join([gen(ele) for ele in where])]) if where else ''
     sql = ' '.join([DELETE, FROM, table, where, ';'])
     # print(sql)
