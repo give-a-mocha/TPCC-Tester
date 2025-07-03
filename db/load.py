@@ -2,6 +2,10 @@ import datetime
 import csv
 import os
 import argparse
+import sys
+
+# 添加父目录到 Python 路径以导入 config 和 util 模块
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config import config, set_warehouse_count
 
