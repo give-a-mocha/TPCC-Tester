@@ -1,19 +1,26 @@
 # TPC-C 测试配置文件
 
 class Config:
+    CUST_PER_DIST = 3000
+    DIST_PER_WARE = 10
+    ORD_PER_DIST = 3000
+    STOCK_PER_WARE = 100000
+    ORDER_LINE_PER_ORDER = 10
+    NEW_ORDER_PER_DIST = 900  # 每个地区新订单数量
     def __init__(self, cnt_w=1):
         # 基础配置
         self.CNT_W = cnt_w  # 仓库数量
         self.CNT_ITEM = 100000  # 商品数量（固定）
         
         # 根据仓库数量计算的配置
-        self.CNT_STOCK = self.CNT_W * 100000
-        self.CNT_DISTRICT = self.CNT_W * 10
-        self.CNT_CUSTOMER = self.CNT_W * 10 * 3000
-        self.CNT_HISTORY = self.CNT_W * 10 * 3000
-        self.CNT_ORDERS = self.CNT_W * 10 * 3000
-        self.CNT_NEW_ORDERS = self.CNT_W * 10 * 900
-        self.CNT_ORDER_LINE = self.CNT_ORDERS * 10
+        self.CNT_STOCK = self.CNT_W * self.STOCK_PER_WARE
+        self.CNT_DISTRICT = self.CNT_W * self.DIST_PER_WARE
+        self.CNT_CUSTOMER = self.CNT_W * self.DIST_PER_WARE * self.CUST_PER_DIST
+        self.CNT_HISTORY = self.CNT_CUSTOMER
+        self.CNT_ORDERS = self.CNT_CUSTOMER
+        # 避免float 运算
+        self.CNT_NEW_ORDERS = self.CNT_W * self.DIST_PER_WARE * 900
+        self.CNT_ORDER_LINE = self.CNT_ORDERS * self.ORDER_LINE_PER_ORDER
         
         # 最大值配置
         self.W_ID_MAX = self.CNT_W + 1

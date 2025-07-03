@@ -1,103 +1,126 @@
-import random
-import string
 import datetime
 import csv
-import sys
 import os
 import argparse
 
-# Constants from tpc.h
-MAXITEMS = 100000 # Corresponds to CNT_ITEM
-CUST_PER_DIST = 3000
-DIST_PER_WARE = 10
-ORD_PER_DIST = 3000
+from config import config, set_warehouse_count
 
-# Based on input CNT_W (number of warehouses):
-# CNT_ITEM = MAXITEMS (fixed)
-# CNT_STOCK = CNT_W * MAXITEMS
-# CNT_DISTRICT = CNT_W * DIST_PER_WARE
-# CNT_CUSTOMER = CNT_W * DIST_PER_WARE * CUST_PER_DIST
-# CNT_HISTORY = CNT_W * DIST_PER_WARE * CUST_PER_DIST
-# CNT_ORDERS = CNT_W * DIST_PER_WARE * ORD_PER_DIST
-# CNT_NEW_ORDERS = CNT_W * DIST_PER_WARE * 900 (for o_id > 2100 out of ORD_PER_DIST)
-# CNT_ORDER_LINE = CNT_ORDERS * 10
+from util import (
+    get_c_last, current_time, get_random_num, rand_dat, rand_str, get_zip_code,
+    set_random_seed, rand_digit, rand_perm, get_ol_supply_w_id
+)
 
-# Constants from spt_proc.h
-TIMESTAMP_LEN = 80
-STRFTIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
-# Global variables (mimicking C)
-timestamp = ""
-permutation = []
-perm_idx = 0
+"""
+TPC-C Table Constraints and Default Values
+==========================================
 
-# Helper functions
+ITEM Table:
+- I_ID: Primary key, range [1, 100000]
+- I_IM_ID: Image ID, range [1, 10000]
+- I_NAME: Item name, varchar(24), random string [14, 24] chars
+- I_PRICE: Price, decimal(5,2), range [1.00, 100.00]
+- I_DATA: Item data, varchar(50), random string [26, 50] chars, 10% contain "ORIGINAL"
 
-def SetSeed(seed_val):
-    """Sets the random seed."""
-    random.seed(seed_val)
+WAREHOUSE Table:
+- W_ID: Primary key, range [1, W] where W is number of warehouses
+- W_NAME: Warehouse name, varchar(10), random string [6, 10] chars
+- W_STREET_1, W_STREET_2: Address, varchar(20), random string [10, 20] chars
+- W_CITY: City, varchar(20), random string [10, 20] chars
+- W_STATE: State, char(2), random string 2 chars
+- W_ZIP: ZIP code, char(9), format "nnnnllll" where n=digit, l=letter
+- W_TAX: Tax rate, decimal(4,4), range [0.0000, 0.2000]
+- W_YTD: Year-to-date balance, decimal(12,2), initial value 300000.00
 
-def RandomNumber(min_val, max_val):
-    """Generates a random number between min_val and max_val (inclusive)."""
-    return random.randint(min_val, max_val)
+STOCK Table:
+- S_I_ID: Item ID, foreign key to ITEM.I_ID, range [1, 100000]
+- S_W_ID: Warehouse ID, foreign key to WAREHOUSE.W_ID
+- S_QUANTITY: Stock quantity, decimal(4,0), range [10, 100]
+- S_DIST_01 to S_DIST_10: District info, char(24), random string 24 chars
+- S_YTD: Year-to-date, decimal(8,0), initial value 0
+- S_ORDER_CNT: Order count, decimal(4,0), initial value 0
+- S_REMOTE_CNT: Remote count, decimal(4,0), initial value 0
+- S_DATA: Stock data, varchar(50), random string [26, 50] chars, 10% contain "ORIGINAL"
 
-def NURand(A, x, y):
-    """Generates a non-uniform random number."""
-    if A == 255:
-        C = 1999
-    elif A == 1023:
-        C = 255
-    elif A == 8191:
-        C = 791
-    else:
-        raise ValueError("Invalid A for NURand")
+DISTRICT Table:
+- D_ID: Primary key, range [1, 10] (10 districts per warehouse)
+- D_W_ID: Warehouse ID, foreign key to WAREHOUSE.W_ID
+- D_NAME: District name, varchar(10), random string [6, 10] chars
+- D_STREET_1, D_STREET_2: Address, varchar(20), random string [10, 20] chars
+- D_CITY: City, varchar(20), random string [10, 20] chars
+- D_STATE: State, char(2), random string 2 chars
+- D_ZIP: ZIP code, char(9), format "nnnnllll"
+- D_TAX: Tax rate, decimal(4,4), range [0.0000, 0.2000]
+- D_YTD: Year-to-date balance, decimal(12,2), initial value 30000.00
+- D_NEXT_O_ID: Next order ID, decimal(8,0), initial value 3001
 
-    return (((RandomNumber(0, A) | RandomNumber(0, C)) % (y - x + 1)) + x)
+CUSTOMER Table:
+- C_ID: Primary key, range [1, 3000] (3000 customers per district)
+- C_D_ID: District ID, foreign key to DISTRICT.D_ID
+- C_W_ID: Warehouse ID, foreign key to WAREHOUSE.W_ID
+- C_FIRST: First name, varchar(16), random string [8, 16] chars
+- C_MIDDLE: Middle initial, char(2), fixed value "OE"
+- C_LAST: Last name, varchar(16), generated using NURand(255,0,999)
+- C_STREET_1, C_STREET_2: Address, varchar(20), random string [10, 20] chars
+- C_CITY: City, varchar(20), random string [10, 20] chars
+- C_STATE: State, char(2), random string 2 chars
+- C_ZIP: ZIP code, char(9), format "nnnnllll"
+- C_PHONE: Phone, char(16), random numeric string 16 digits
+- C_SINCE: Since date, datetime, current timestamp
+- C_CREDIT: Credit, char(2), "GC" (90%) or "BC" (10%)
+- C_CREDIT_LIM: Credit limit, decimal(12,2), fixed value 50000.00
+- C_DISCOUNT: Discount, decimal(4,4), range [0.0000, 0.5000]
+- C_BALANCE: Balance, decimal(12,2), initial value -10.00
+- C_YTD_PAYMENT: YTD payment, decimal(12,2), initial value 10.00
+- C_PAYMENT_CNT: Payment count, decimal(4,0), initial value 1
+- C_DELIVERY_CNT: Delivery count, decimal(4,0), initial value 0
+- C_DATA: Customer data, varchar(500), random string [300, 500] chars
 
-def MakeAlphaString(min_len, max_len, prefix=""):
-    """Generates a random alphabetic string."""
-    length = RandomNumber(min_len, max_len)
-    return prefix + ''.join(random.choice(string.ascii_letters) for _ in range(length - len(prefix)))
+HISTORY Table:
+- H_C_ID: Customer ID, foreign key to CUSTOMER.C_ID
+- H_C_D_ID: Customer district ID, foreign key to DISTRICT.D_ID
+- H_C_W_ID: Customer warehouse ID, foreign key to WAREHOUSE.W_ID
+- H_D_ID: District ID, foreign key to DISTRICT.D_ID
+- H_W_ID: Warehouse ID, foreign key to WAREHOUSE.W_ID
+- H_DATE: Date, datetime, current timestamp
+- H_AMOUNT: Amount, decimal(6,2), initial value 10.00
+- H_DATA: History data, varchar(24), random string [12, 24] chars
 
-def MakeNumberString(min_len, max_len):
-    """Generates a random numeric string."""
-    length = RandomNumber(min_len, max_len)
-    return ''.join(random.choice(string.digits) for _ in range(length))
+ORDERS Table:
+- O_ID: Primary key, range [1, 3000] (3000 orders per district)
+- O_D_ID: District ID, foreign key to DISTRICT.D_ID
+- O_W_ID: Warehouse ID, foreign key to WAREHOUSE.W_ID
+- O_C_ID: Customer ID, random permutation of [1, 3000]
+- O_ENTRY_D: Entry date, datetime, current timestamp
+- O_CARRIER_ID: Carrier ID, decimal(2,0), range [1, 10] for delivered orders, NULL for new orders
+- O_OL_CNT: Order line count, decimal(2,0), range [5, 15]
+- O_ALL_LOCAL: All local flag, decimal(1,0), 1 for all local
 
-def Lastname(num):
-    """Generates a TPC-C compliant last name."""
-    N = ["BAR", "OUGHT", "ABLE", "PRI", "PRES", "ESE", "ANTI", "CALLY", "ATION", "EING"]
-    n = N
-    return n[num // 100] + n[(num // 10) % 10] + n[num % 10]
+NEW_ORDER Table:
+- NO_O_ID: Order ID, foreign key to ORDERS.O_ID, last 900 orders per district
+- NO_D_ID: District ID, foreign key to DISTRICT.D_ID
+- NO_W_ID: Warehouse ID, foreign key to WAREHOUSE.W_ID
 
-def gettimestamp():
-    """Gets the current timestamp string."""
-    return datetime.datetime.now().strftime(STRFTIME_FORMAT)
-
-def InitPermutation():
-    """Initializes the customer ID permutation."""
-    global permutation, perm_idx
-    permutation = list(range(1, CUST_PER_DIST + 1))
-    random.shuffle(permutation)
-    perm_idx = 0
-
-def GetPermutation():
-    """Gets the next customer ID from the permutation."""
-    global permutation, perm_idx
-    if perm_idx >= len(permutation):
-        # Should not happen in standard TPC-C load
-        raise IndexError("Permutation exhausted")
-    c_id = permutation[perm_idx]
-    perm_idx += 1
-    return c_id
+ORDER_LINE Table:
+- OL_O_ID: Order ID, foreign key to ORDERS.O_ID
+- OL_D_ID: District ID, foreign key to DISTRICT.D_ID
+- OL_W_ID: Warehouse ID, foreign key to WAREHOUSE.W_ID
+- OL_NUMBER: Line number, decimal(2,0), range [1, O_OL_CNT]
+- OL_I_ID: Item ID, foreign key to ITEM.I_ID, range [1, 100000]
+- OL_SUPPLY_W_ID: Supply warehouse ID, 99% same as OL_W_ID, 1% remote
+- OL_DELIVERY_D: Delivery date, datetime, current timestamp for delivered, NULL for new
+- OL_QUANTITY: Quantity, decimal(2,0), fixed value 5
+- OL_AMOUNT: Amount, decimal(6,2), range [0.01, 9999.99] for delivered, 0.00 for new
+- OL_DIST_INFO: District info, char(24), random string 24 chars
+"""
 
 def MakeAddress():
     """Generates a TPC-C compliant address."""
-    street_1 = MakeAlphaString(10, 20)
-    street_2 = MakeAlphaString(10, 20)
-    city = MakeAlphaString(10, 20)
-    state = MakeAlphaString(2, 2)
-    zip_code = MakeNumberString(9, 9)
+    street_1 = rand_str(10, 21)
+    street_2 = rand_str(10, 21)
+    city = rand_str(10, 21)
+    state = rand_str(2)
+    zip_code = get_zip_code()
     return street_1, street_2, city, state, zip_code
 
 # Data Generation Functions (writing to CSV)
@@ -111,22 +134,11 @@ def load_items(output_dir="."):
         # Write header
         writer.writerow(["i_id", "i_im_id", "i_name", "i_price", "i_data"])
 
-        orig = [0] * (MAXITEMS + 1)
-        for _ in range(MAXITEMS // 10):
-            pos = RandomNumber(1, MAXITEMS)
-            while orig[pos]:
-                pos = RandomNumber(1, MAXITEMS)
-            orig[pos] = 1
-
-        for i_id in range(1, MAXITEMS + 1):
-            i_im_id = RandomNumber(1, 10000)
-            i_name = MakeAlphaString(14, 24)
-            i_price = RandomNumber(100, 10000) / 100.0
-            i_data = MakeAlphaString(26, 50)
-
-            if orig[i_id]:
-                pos = RandomNumber(0, len(i_data) - 8)
-                i_data = i_data[:pos] + "original" + i_data[pos+8:]
+        for i_id in range(1, config.CNT_ITEM + 1):
+            i_im_id = get_random_num(1, 10000)  # [1, 10000]
+            i_name = rand_str(14, 25)
+            i_price = get_random_num(100, 10000) / 100.0  # [1.00, 100.00]
+            i_data = rand_dat(26, 51)
 
             writer.writerow([i_id, i_im_id, i_name, i_price, i_data])
 
@@ -136,7 +148,7 @@ def load_items(output_dir="."):
                     print(f" {i_id}", flush=True)
         print("\nItem Done. ")
 
-def load_ware(min_ware, max_ware, output_dir="."):
+def load_ware(output_dir="."):
     """Loads the Warehouse, Stock, and District tables data and writes to CSV."""
     print("Loading Warehouse ")
     ware_filepath = os.path.join(output_dir, "warehouse.csv")
@@ -156,42 +168,32 @@ def load_ware(min_ware, max_ware, output_dir="."):
         stock_writer.writerow(["s_i_id", "s_w_id", "s_quantity", "s_dist_01", "s_dist_02", "s_dist_03", "s_dist_04", "s_dist_05", "s_dist_06", "s_dist_07", "s_dist_08", "s_dist_09", "s_dist_10", "s_ytd", "s_order_cnt", "s_remote_cnt", "s_data"])
         district_writer.writerow(["d_id", "d_w_id", "d_name", "d_street_1", "d_street_2", "d_city", "d_state", "d_zip", "d_tax", "d_ytd", "d_next_o_id"])
 
-        for w_id in range(min_ware, max_ware + 1):
+        for w_id in range(1, config.CNT_W + 1):
             # Generate Warehouse Data
-            w_name = MakeAlphaString(6, 10)
+            w_name = rand_str(6, 11)
             w_street_1, w_street_2, w_city, w_state, w_zip = MakeAddress()
-            w_tax = RandomNumber(10, 20) / 100.0
+            w_tax = get_random_num(0, 2000) / 10000.0  # [0.0000, 0.2000]
             w_ytd = 300000.00
 
             ware_writer.writerow([w_id, w_name, w_street_1, w_street_2, w_city, w_state, w_zip, w_tax, w_ytd])
 
             # Generate Stock Data for this warehouse
             print(f"Loading Stock Wid={w_id}")
-            orig = [0] * (MAXITEMS + 1)
-            for _ in range(MAXITEMS // 10):
-                pos = RandomNumber(1, MAXITEMS)
-                while orig[pos]:
-                    pos = RandomNumber(1, MAXITEMS)
-                orig[pos] = 1
 
-            for s_i_id in range(1, MAXITEMS + 1):
+            for s_i_id in range(1, config.CNT_ITEM + 1):
                 s_w_id = w_id
-                s_quantity = RandomNumber(10, 100)
-                s_dist_01 = MakeAlphaString(24, 24)
-                s_dist_02 = MakeAlphaString(24, 24)
-                s_dist_03 = MakeAlphaString(24, 24)
-                s_dist_04 = MakeAlphaString(24, 24)
-                s_dist_05 = MakeAlphaString(24, 24)
-                s_dist_06 = MakeAlphaString(24, 24)
-                s_dist_07 = MakeAlphaString(24, 24)
-                s_dist_08 = MakeAlphaString(24, 24)
-                s_dist_09 = MakeAlphaString(24, 24)
-                s_dist_10 = MakeAlphaString(24, 24)
-                s_data = MakeAlphaString(26, 50)
-
-                if orig[s_i_id]:
-                    pos = RandomNumber(0, len(s_data) - 8)
-                    s_data = s_data[:pos] + "original" + s_data[pos+8:]
+                s_quantity = get_random_num(10, 100)
+                s_dist_01 = rand_str(24)
+                s_dist_02 = rand_str(24)
+                s_dist_03 = rand_str(24)
+                s_dist_04 = rand_str(24)
+                s_dist_05 = rand_str(24)
+                s_dist_06 = rand_str(24)
+                s_dist_07 = rand_str(24)
+                s_dist_08 = rand_str(24)
+                s_dist_09 = rand_str(24)
+                s_dist_10 = rand_str(24)
+                s_data = rand_dat(26, 51)
 
                 stock_writer.writerow([s_i_id, s_w_id, s_quantity, s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10, 0, 0, 0, s_data])
 
@@ -207,18 +209,16 @@ def load_ware(min_ware, max_ware, output_dir="."):
             d_ytd = 30000.0
             d_next_o_id = 3001
 
-            for d_id in range(1, DIST_PER_WARE + 1):
-                d_name = MakeAlphaString(6, 10)
+            for d_id in range(1, config.DIST_PER_WARE + 1):
+                d_name = rand_str(6, 11)
                 d_street_1, d_street_2, d_city, d_state, d_zip = MakeAddress()
-                d_tax = RandomNumber(10, 20) / 100.0
-
+                d_tax = get_random_num(0, 2000) / 10000.0  # [0.0000, 0.2000]
                 district_writer.writerow([d_id, d_w_id, d_name, d_street_1, d_street_2, d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id])
-
             print(" District Done.")
         print("Warehouse Done.")
 
 
-def load_cust(min_ware, max_ware, output_dir="."):
+def load_cust(output_dir="."):
     """Loads the Customer and History tables data and writes to CSV."""
     print("Loading Customer ")
     cust_filepath = os.path.join(output_dir, "customer.csv")
@@ -234,32 +234,29 @@ def load_cust(min_ware, max_ware, output_dir="."):
         cust_writer.writerow(["c_id", "c_d_id", "c_w_id", "c_first", "c_middle", "c_last", "c_street_1", "c_street_2", "c_city", "c_state", "c_zip", "c_phone", "c_since", "c_credit", "c_credit_lim", "c_discount", "c_balance", "c_ytd_payment", "c_payment_cnt", "c_delivery_cnt", "c_data"])
         hist_writer.writerow(["h_c_id", "h_c_d_id", "h_c_w_id", "h_d_id", "h_w_id", "h_date", "h_amount", "h_data"])
 
-        for w_id in range(min_ware, max_ware + 1):
-            for d_id in range(1, DIST_PER_WARE + 1):
+        for w_id in range(1, config.CNT_W + 1):
+            for d_id in range(1, config.DIST_PER_WARE + 1):
                 print(f"Loading Customer for DID={d_id}, WID={w_id}")
                 c_d_id = d_id
                 c_w_id = w_id
 
-                for c_id in range(1, CUST_PER_DIST + 1):
+                for c_id in range(1, config.CUST_PER_DIST + 1):
                     # Generate Customer Data
-                    c_first = MakeAlphaString(8, 16)
+                    c_first = rand_str(8, 17)
                     c_middle = "OE"
-                    if c_id <= 1000:
-                        c_last = Lastname(c_id - 1)
-                    else:
-                        c_last = Lastname(NURand(255, 0, 999))
+                    c_last = get_c_last(c_id - 1)
 
                     c_street_1, c_street_2, c_city, c_state, c_zip = MakeAddress()
-                    c_phone = MakeNumberString(16, 16)
-                    c_since = gettimestamp()
-                    c_credit = "GC" if RandomNumber(0, 1) else "BC"
+                    c_phone = rand_digit(16)
+                    c_since = current_time()
+                    c_credit = "GC" if get_random_num(0, 100) < 90 else "BC"  # 90% GC, 10% BC
                     c_credit_lim = 50000
-                    c_discount = RandomNumber(0, 50) / 100.0
+                    c_discount = get_random_num(0, 5000) / 10000.0  # [0.0000, 0.5000]
                     c_balance = -10.0
                     c_ytd_payment = 10.0
                     c_payment_cnt = 1
                     c_delivery_cnt = 0
-                    c_data = MakeAlphaString(30, 50)
+                    c_data = rand_str(30, 51)
 
                     cust_writer.writerow([c_id, c_d_id, c_w_id, c_first, c_middle, c_last, c_street_1, c_street_2, c_city, c_state, c_zip, c_phone, c_since, c_credit, c_credit_lim, c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data])
 
@@ -269,9 +266,9 @@ def load_cust(min_ware, max_ware, output_dir="."):
                     h_c_w_id = c_w_id
                     h_d_id = d_id
                     h_w_id = w_id
-                    h_date = gettimestamp()
+                    h_date = current_time()
                     h_amount = 10.0
-                    h_data = MakeAlphaString(12, 24)
+                    h_data = rand_str(12, 25)
 
                     hist_writer.writerow([h_c_id, h_c_d_id, h_c_w_id, h_d_id, h_w_id, h_date, h_amount, h_data])
 
@@ -283,7 +280,7 @@ def load_cust(min_ware, max_ware, output_dir="."):
         print("Customer Loading Completed for all Warehouses/Districts.")
 
 
-def load_ord(min_ware, max_ware, output_dir="."):
+def load_ord(output_dir="."):
     """Loads the Orders, New-Orders, and Order-Line tables data and writes to CSV."""
     print("Loading Orders ")
     ord_filepath = os.path.join(output_dir, "orders.csv")
@@ -303,22 +300,24 @@ def load_ord(min_ware, max_ware, output_dir="."):
         neword_writer.writerow(["no_o_id", "no_d_id", "no_w_id"])
         orl_writer.writerow(["ol_o_id", "ol_d_id", "ol_w_id", "ol_number", "ol_i_id", "ol_supply_w_id", "ol_delivery_d", "ol_quantity", "ol_amount", "ol_dist_info"])
 
-        for w_id in range(min_ware, max_ware + 1):
-            for d_id in range(1, DIST_PER_WARE + 1):
+        for w_id in range(1, config.CNT_W + 1):
+            for d_id in range(1, config.DIST_PER_WARE + 1):
                 print(f"Loading Orders for D={d_id}, W={w_id}")
                 o_d_id = d_id
                 o_w_id = w_id
 
-                InitPermutation() # Initialize permutation for customers in this district
+                index = 0
+                perm = rand_perm(config.CUST_PER_DIST)
 
-                for o_id in range(1, ORD_PER_DIST + 1):
+                for o_id in range(1, config.ORD_PER_DIST + 1):
                     # Generate Order Data
-                    o_c_id = GetPermutation()
-                    o_entry_d = gettimestamp()
-                    o_ol_cnt = 10
-                    o_all_local = 1 # Assuming all orders are local based on C code
+                    o_c_id = perm[index] + 1
+                    index += 1
+                    o_entry_d = current_time()
+                    o_ol_cnt = get_random_num(5, 15)  # [5, 15]
+                    o_all_local = 1 # 假设所有订单都是本地订单
 
-                    o_carrier_id = RandomNumber(1, 10) if o_id <= 2100 else 0 # Undelivered orders have carrier_id 0
+                    o_carrier_id = get_random_num(1, 10) if o_id <= 2100 else 0 # Undelivered orders have carrier_id 0
 
                     ord_writer.writerow([o_id, o_d_id, o_w_id, o_c_id, o_entry_d, o_carrier_id, o_ol_cnt, o_all_local])
 
@@ -331,13 +330,13 @@ def load_ord(min_ware, max_ware, output_dir="."):
                         ol_o_id = o_id
                         ol_d_id = o_d_id
                         ol_w_id = o_w_id
-                        ol_i_id = RandomNumber(1, MAXITEMS)
-                        ol_supply_w_id = o_w_id # Assuming supply warehouse is the same as order warehouse
+                        ol_i_id = get_random_num(1, config.CNT_ITEM)
+                        ol_supply_w_id = get_ol_supply_w_id(o_w_id, config.CNT_W, 1)[0]
                         ol_quantity = 5
-                        ol_amount = RandomNumber(10, 10000) / 100.0 if o_id <= 2100 else 0.00 # Amount is 0 for undelivered
-                        ol_dist_info = MakeAlphaString(24, 24)
+                        ol_amount = get_random_num(10, 10000) / 100.0 if o_id <= 2100 else 0.00 # Amount is 0 for undelivered
+                        ol_dist_info = rand_str(24)
 
-                        ol_delivery_d = gettimestamp() if o_id <= 2100 else "null" # Delivery date is empty for undelivered
+                        ol_delivery_d = current_time() if o_id <= 2100 else "null" # Delivery date is empty for undelivered
 
                         orl_writer.writerow([ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info])
 
@@ -354,21 +353,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="TPCC-mysql Data Loader (Python)")
     parser.add_argument("-w", "--warehouses", type=int, required=True, help="Number of warehouses")
     parser.add_argument("-l", "--part", type=int, choices=[1, 2, 3, 4], help="Particle mode: 1=ITEMS, 2=WAREHOUSE, 3=CUSTOMER, 4=ORDERS")
-    parser.add_argument("-m", "--min-wh", type=int, default=1, help="Minimum warehouse ID (for particle mode)")
-    parser.add_argument("-n", "--max-wh", type=int, help="Maximum warehouse ID (for particle mode)")
     parser.add_argument("-o", "--output-dir", type=str, default=".", help="Output directory for CSV files")
 
     args = parser.parse_args()
 
     count_ware = args.warehouses
+    set_warehouse_count(count_ware)
     particle_flg = args.part is not None
     part_no = args.part
-    min_ware = args.min_wh
-    max_ware = args.max_wh if args.max_wh is not None else count_ware
-
-    if not particle_flg:
-        min_ware = 1
-        max_ware = count_ware
 
     print("*************************************")
     print("*** TPCC-mysql Data Loader (Python) ***")
@@ -378,24 +370,12 @@ if __name__ == "__main__":
     print(f"  [warehouse]: {count_ware}")
     if particle_flg:
         print(f"  [part(1-4)]: {part_no}")
-        print(f"     [MIN WH]: {min_ware}")
-        print(f"     [MAX WH]: {max_ware}")
     print(f" [output-dir]: {args.output_dir}")
 
     # Seed the random number generator
-    seed_val = None
-    try:
-        with open("/dev/urandom", "rb") as f:
-            seed_val = int.from_bytes(f.read(4), byteorder='big')
-    except FileNotFoundError:
-        try:
-            with open("/dev/random", "rb") as f:
-                 seed_val = int.from_bytes(f.read(4), byteorder='big')
-        except FileNotFoundError:
-            seed_val = int(datetime.datetime.now().timestamp())
-            print("Warning: /dev/urandom and /dev/random not found. Using time-based seed.")
-
-    SetSeed(seed_val)
+    seed_val = int(datetime.datetime.now().timestamp())
+    
+    set_random_seed(seed_val)
     print(f"Using seed: {seed_val}")
 
     # Ensure output directory exists
@@ -405,18 +385,18 @@ if __name__ == "__main__":
 
     if not particle_flg:
         load_items(args.output_dir)
-        load_ware(min_ware, max_ware, args.output_dir)
-        load_cust(min_ware, max_ware, args.output_dir)
-        load_ord(min_ware, max_ware, args.output_dir)
+        load_ware(args.output_dir)
+        load_cust(args.output_dir)
+        load_ord(args.output_dir)
     else:
         if part_no == 1:
             load_items(args.output_dir)
         elif part_no == 2:
-            load_ware(min_ware, max_ware, args.output_dir)
+            load_ware(args.output_dir)
         elif part_no == 3:
-            load_cust(min_ware, max_ware, args.output_dir)
+            load_cust(args.output_dir)
         elif part_no == 4:
-            load_ord(min_ware, max_ware, args.output_dir)
+            load_ord(args.output_dir)
         else:
             print("Unknown part_no")
             print("1:ITEMS 2:WAREHOUSE 3:CUSTOMER 4:ORDERS")

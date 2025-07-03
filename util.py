@@ -10,13 +10,13 @@ _names = ['BARR', 'OUGH', 'ABLE', 'PRII', 'PRES', 'ESEE', 'ANTI', 'CALL', 'ATIO'
 _C_LOAD = 117
 _C_RUN = 191
 
-
+# 生成一个随机字符串，长度在 [lower, upper) 范围内。
 def rand_str(lower:int, upper:int = 0) -> str:
     if upper == 0:
         upper = lower + 1
     return ''.join([random.choice(string.ascii_letters) for i in range(random.randrange(lower, upper))])
 
-
+# 这是 TPC-C 基准测试中的一个要求：约 10% 的商品数据需要包含特定的字符串。
 def rand_dat(lower:int, upper:int) -> str:
     if random.randrange(100) < 10:
         s = rand_str(lower, upper - 8)
@@ -30,7 +30,7 @@ def rand_digit(num:int) -> str:
     return ''.join([random.choice(string.digits) for i in range(num)])
 
 
-def zip_code() -> str:
+def get_zip_code() -> str:
     return rand_digit(4) + '11111'
 
 
@@ -43,7 +43,7 @@ def rand_perm(max:int) -> List[int]:
 def NURand(A:int, x:int, y:int, C:int) -> int:
     return (((random.randrange(0, A) | random.randrange(x, y)) + C) % (y - x)) + x  # y-1 = y
 
-
+# 根据 k 可能是客户id 生成 客户 c_last
 def get_c_last(k:int = 1000, run:bool = False) -> str:
     C = _C_RUN if run else _C_LOAD
     if k >= 1000:
@@ -54,15 +54,15 @@ def get_c_last(k:int = 1000, run:bool = False) -> str:
 def current_time() -> str:
     return str(datetime.datetime.now())[:19]
 
-
+# 生成一个客户 ID
 def get_c_id() -> int:
-    return NURand(1023, 1, 3001, C=_C_RUN)
+    return NURand(1023, 1, config.CUST_PER_DIST + 1, C=_C_RUN)
 
-
+# 函数 get_ol_i_id 的作用是生成一个订单行项目 ID 列表：
 def get_ol_i_id() -> List[int]:
     ol_cnt = random.randrange(5, 16)
     # rbk = random.randrange(100)
-    ret = [NURand(8191, 1, 100001, C=_C_RUN) for i in range(ol_cnt)]
+    ret = [NURand(8191, 1, config.CNT_ITEM + 1, C=_C_RUN) for i in range(ol_cnt)]
     # if rbk == 0:
     #     ret[-1] = 100001  # unused item number
     return ret
@@ -90,15 +90,16 @@ def get_ol_supply_w_id(home_w_id:int, scale:int, ol_cnt:int) -> List[int]:
 #         list(range(scale)).remove(home_w_id))
 #     return [supply_id() for i in range(ol_cnt)]
 
-
+# 函数 get_ol_quantity 的作用是生成一个订单行数量列表：
 def get_ol_quantity(ol_cnt:int) -> List[int]:
     return [random.randrange(1, 11) for i in range(ol_cnt)]
 
 
+# 函数 get_w_id 的作用是生成一个随机的仓库 ID
 def get_w_id() -> int:
     return random.randrange(1, config.W_ID_MAX)
 
-
+# 函数 get_d_id 的作用是生成一个随机的地区 ID
 def get_d_id() -> int:
     return random.randrange(1, config.D_ID_MAX)
 
@@ -116,7 +117,7 @@ def get_c_w_id_d_id(home_w_id:int, d_id:int, scale:int) -> Tuple[int, int]:
         # 从除 home_w_id 外随机选择一个仓库 ID 和 1 到 10 之间随机选择一个区域 ID
         other_ids = [i for i in range(1, scale + 1) if i != home_w_id]
         c_w_id = random.choice(other_ids)
-        c_d_id = random.randrange(1, 11)
+        c_d_id = random.randrange(1, config.DIST_PER_WARE + 1)
 
     return c_w_id, c_d_id
 
@@ -161,3 +162,11 @@ def get_h_amount() -> float:
 
 def get_o_carrier_id() -> int:
     return random.randrange(1, 11)
+
+def get_random_num(lower:int, upper:int) -> int:
+    """生成一个在 [lower, upper] 范围内的随机整数"""
+    return random.randint(lower, upper)
+
+def set_random_seed(seed:int) -> None:
+    """设置随机数生成器的种子"""
+    random.seed(seed)
