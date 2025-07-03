@@ -318,7 +318,7 @@ def load_ord(output_dir="."):
                     o_c_id = perm[index] + 1
                     index += 1
                     o_entry_d = current_time()
-                    o_ol_cnt = get_random_num(5, 15)  # [5, 15]
+                    o_ol_cnt = config.ORDER_LINE_PER_ORDER
                     o_all_local = 1 # 假设所有订单都是本地订单
 
                     o_carrier_id = get_random_num(1, 10) if o_id <= 2100 else 0 # Undelivered orders have carrier_id 0
