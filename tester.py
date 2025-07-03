@@ -72,7 +72,7 @@ def do_test(driver, lock, txns, txn_prob=None):
         elif txn == 4:  # StockLevel
             w_id = get_w_id()
             d_id = get_d_id()  # 获得地区id，1～10的随机数
-            threshold = random.randrange(10, 21)
+            threshold = random.randrange(10, 101)
 
         while ret == SQLState.ABORT:
             if txn == 0:  # NewOrder
