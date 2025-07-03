@@ -290,6 +290,7 @@ class Driver:
             # phase 1
             # 检索仓库（warehouse）税率、区域（district）税率和下一个可用订单号。
             try:
+                # 查询区域的税率和下一个订单号
                 res = select(client=self._client,
                              table=[DISTRICT],
                              col=[D_TAX, D_NEXT_O_ID],
@@ -310,6 +311,7 @@ class Driver:
                 d_tax = 0
                 d_next_o_id = 0
 
+            # 更新区域的下一个订单号
             if update(client=self._client,
                       table=DISTRICT,
                       set=[(D_NEXT_O_ID, d_next_o_id + 1)],
@@ -317,6 +319,7 @@ class Driver:
                 return SQLState.ABORT
 
             try:
+                # 查询仓库的税率和客户的余额
                 res = select(client=self._client,
                              table=[CUSTOMER, WAREHOUSE],
                              col=[C_DISCOUNT, C_LAST, C_CREDIT, W_TAX],
@@ -348,8 +351,10 @@ class Driver:
                 return SQLState.ABORT
 
             # phase 3
+            # 处理每个订单行项目
             for i in range(ol_cnt):
                 try:
+                    # 查询商品（item）信息
                     res = select(client=self._client,
                                  table=[ITEM],
                                  col=[I_PRICE, I_NAME, I_DATA],
@@ -365,6 +370,7 @@ class Driver:
                     i_data = 'null'
 
                 try:
+                    # 查询库存（stock）信息
                     res = select(client=self._client,
                                  table=[STOCK],
                                  col=[
@@ -399,7 +405,7 @@ class Driver:
 
                 if ol_supply_w_id[i] != w_id:
                     s_remote_cnt += 1
-
+                # 更新库存信息
                 if update(client=self._client,
                           table=STOCK,
                           set=[(S_QUANTITY, s_quantity),
@@ -413,6 +419,7 @@ class Driver:
                 brand_generic = 'B' if re.search('ORIGINAL', i_data) and re.search('ORIGINAL', s_data) else 'G'
 
                 try:
+                    # 插入订单行（order-line）信息
                     if insert(client=self._client,
                               table=ORDER_LINE,
                               rows=[d_next_o_id, d_id, w_id, i, ol_i_id[i], ol_supply_w_id[i], order_time, ol_quantity[i],
@@ -451,6 +458,7 @@ class Driver:
                 return SQLState.ABORT
             # print('+ Payment')
             try:
+                # 查询仓库信息
                 res = select(client=self._client,
                              table=[WAREHOUSE],
                              col=[W_NAME, W_STREET_1, W_STREET_2, W_CITY, W_STATE, W_ZIP, W_YTD],
@@ -461,12 +469,14 @@ class Driver:
             except Exception as e:
                 w_name, d_name = 'null', 'null'
             # w_ytd = eval(w_ytd)
+            # 更新仓库年度销售额
             if update(client=self._client,
                        table=WAREHOUSE,
                        set=[(W_YTD, W_YTD + ' + ' + str(h_amount))],
                        where=[(W_ID, eq, w_id)]) == SQLState.ABORT:
                 return SQLState.ABORT
             try:
+                # 查询区域信息
                 res = select(client=self._client,
                              table=[DISTRICT],
                              col=[D_NAME, D_STREET_1, D_STREET_2, D_CITY, D_STATE, D_ZIP, D_YTD],
@@ -477,12 +487,14 @@ class Driver:
             except Exception as e:
                 d_name = 'null'
             # d_ytd = eval(d_ytd)
+            # 更新区域年度销售额
             if update(client=self._client,
                        table=DISTRICT,
                        set=[(D_YTD, D_YTD + ' + ' + str(h_amount))],
                        where=[(D_W_ID, eq, w_id), (D_ID, eq, d_id)]) == SQLState.ABORT:
                 return SQLState.ABORT
 
+            # 根据客户ID或姓名查找客户
             if type(c_query) is str:
                 c_query = "'" + c_query + "'"
                 try:
@@ -533,6 +545,7 @@ class Driver:
                     c_balance = 0
                     c_ytd_payment = 0
                     c_payment_cnt = 0
+            # 更新客户余额和付款信息
             if update(client=self._client,
                        table=CUSTOMER,
                        set=[(C_BALANCE, c_balance + h_amount),
