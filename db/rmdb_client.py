@@ -3,6 +3,8 @@ import socket
 
 from typing import Optional
 
+from debug_utils import log_info
+
 
 class Client:
     MAX_MEM_BUFFER_SIZE = 8192
@@ -61,6 +63,7 @@ class Client:
             if self.sockfd is None:
                 raise RuntimeError("Socket connection is not established")
             try:
+                log_info(cmd.strip())
                 self.sockfd.sendall(cmd.encode())
                 recv_buf = self.sockfd.recv(self.MAX_MEM_BUFFER_SIZE)
                 if not recv_buf:

@@ -4,8 +4,8 @@ import shutil
 import time
 from multiprocessing import Process, Lock
 
-import matplotlib.pyplot as plt
-import numpy as np
+# import matplotlib.pyplot as plt
+# import numpy as np
 
 from mysql.driver import Driver
 from record.record import analysis
@@ -15,7 +15,7 @@ from tester import do_test
 from config import config
 from config import set_warehouse_count
 
-from debug_utils import enable_trace
+from debug_utils import enable_log
 
 
 def clean():
@@ -35,12 +35,18 @@ def prepare():
     driver.delay_close()
 
 
-def test(lock, tid, txns=150, txn_prob=None, warehouses=1):
+def test(lock, tid, txns=150, txn_prob=None, warehouses=1, enable_debug=False, enable_logging=False):
+    from debug_utils import set_process_id, close_log, enable_log
+    if enable_debug:
+        enable_log(True)
+    if enable_logging:
+        set_process_id(tid)
     print(f'+ Test_{tid} Begin')
     driver = Driver(scale=config.CNT_W)
     do_test(driver, lock, txns, txn_prob)
     print(f'- Test_{tid} Finished')
     driver.delay_close()
+    close_log()
 
 
 def output_result():
@@ -77,14 +83,14 @@ def output_result():
         f2.writelines(new_order_lines)
 
     # 画图并保存图像
-    times = np.array([e[1] for e in new_order_result])
-    numbers = np.array([e[0] for e in new_order_result])
+    # times = np.array([e[1] for e in new_order_result])
+    # numbers = np.array([e[0] for e in new_order_result])
 
-    plt.plot(times, numbers)
-    plt.ylabel('Number of New-Orders')
-    plt.xlabel('Time unit: second')
-    plt.savefig('TPCC-Tester/result/timecost_and_num_of_NewOrders.jpg')
-    plt.show()
+    # plt.plot(times, numbers)
+    # plt.ylabel('Number of New-Orders')
+    # plt.xlabel('Time unit: second')
+    # plt.savefig('TPCC-Tester/result/timecost_and_num_of_NewOrders.jpg')
+    # plt.show()
 
     # 删除数据库文件
     if os.path.exists('TPCC-Tester/result/rds.db'):
@@ -103,15 +109,18 @@ def main():
     parser.add_argument('--ro', type=int, help='Read only transaction phase time')
     parser.add_argument('--thread', type=int, help='Thread number')
     parser.add_argument('--w', type=int, required=True, help='Number of warehouses (CNT_W)')
-    parser.add_argument('--pf', action='store_true', help='Enable print debug information')
-    
+    parser.add_argument('--debug', action='store_true', help='Enable print debug information')
+    parser.add_argument('--log', action='store_true', help='Enable print debug information')
+
     args = parser.parse_args()
-    enable_trace(args.pf) # Enable or disable tracing based on --debug argument
-    
+        
     thread_num = args.thread
     set_warehouse_count(args.w)
 
     clean()
+
+    if args.debug:
+        enable_log(True)
 
     if args.prepare:
         lt1 = time.time()
@@ -128,7 +137,7 @@ def main():
         if args.rw:
             for i in range(thread_num):
                 process_list.append(
-                    Process(target=test, args=(lock, i + 1, args.rw, [10 / 23, 10 / 23, 1 / 23, 1 / 23, 1 / 23])))
+                    Process(target=test, args=(lock, 'rw_' + str(i + 1), args.rw, [10 / 23, 10 / 23, 1 / 23, 1 / 23, 1 / 23], 1, args.debug, args.log)))
                 process_list[i].start()
 
             for i in range(thread_num):
@@ -137,7 +146,7 @@ def main():
         process_list = []
         if args.ro:
             for i in range(thread_num):
-                process_list.append(Process(target=test, args=(lock, i + 1, args.ro, [0, 0, 0, 0.5, 0.5])))
+                process_list.append(Process(target=test, args=(lock, 'ro_' + str(i + 1), args.ro, [0, 0, 0, 0.5, 0.5], 1, args.debug, args.log)))
                 process_list[i].start()
 
             for i in range(thread_num):

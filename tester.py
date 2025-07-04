@@ -58,6 +58,7 @@ def do_test(driver, lock, txns, txn_prob=None):
             ol_i_id = get_ol_i_id()  # 获得新订单中的商品id列表
             ol_supply_w_id = get_ol_supply_w_id(w_id, driver._scale, len(ol_i_id))  # 为新订单中每个商品选择一个供应仓库，当前设定就一个供应仓库
             ol_quantity = get_ol_quantity(len(ol_i_id))  # 为新订单中每个商品设置购买数量
+            driver._client.send_cmd("-- NewOrder\n")
 
         elif txn == 1:  # Payment
             w_id = get_w_id()
@@ -65,20 +66,24 @@ def do_test(driver, lock, txns, txn_prob=None):
             query_cus = query_cus_by(True)
             h_amount = get_h_amount()
             c_w_id, c_d_id = get_c_w_id_d_id(w_id, d_id, driver._scale)  # 获得客户所属的仓库id和地区id
+            driver._client.send_cmd("-- Payment\n")
 
         elif txn == 2:  # Delivery
             w_id = get_w_id()
             o_carrier_id = get_o_carrier_id()
+            driver._client.send_cmd("-- Delivery\n")
 
         elif txn == 3:  # OrderStatus
             w_id = get_w_id()
             d_id = get_d_id()  # 获得地区id，1～10的随机数
             query_cus = query_cus_by()
+            driver._client.send_cmd("-- OrderStatus\n")
 
         elif txn == 4:  # StockLevel
             w_id = get_w_id()
             d_id = get_d_id()  # 获得地区id，1～10的随机数
             threshold = random.randrange(10, 101)
+            driver._client.send_cmd("-- StockLevel\n")
 
         while ret == SQLState.ABORT:
             if txn == 0:  # NewOrder

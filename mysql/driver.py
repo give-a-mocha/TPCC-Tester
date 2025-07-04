@@ -1,7 +1,7 @@
 import re
 from typing import List, Union
 
-from debug_utils import info
+from debug_utils import log_error
 
 from db.rmdb_client import Client
 from mysql.sql import (
@@ -102,8 +102,8 @@ class Driver:
     def count_star(self):
         print("Count star...")
         # 遍历每个表的信息并进行检查
-        tables_info = config.get_tables_info()
-        for table, count_as, expected_count, count_type in tables_info:
+        tables_error = config.get_tables_info()
+        for table, count_as, expected_count, count_type in tables_error:
             self.count_and_check(self._client, table, count_as, expected_count, count_type)
 
     def consistency_check(self):
@@ -230,7 +230,7 @@ class Driver:
 
         except Exception as e:
             print(f"Exception occurred in w_id: {w_id}, d_id: {d_id}")
-            print(e)
+            print(str(e))
 
     def consistency_check2(self, cnt_new_orders:int):
         print("consistency checking 2...")
@@ -251,7 +251,7 @@ class Driver:
                 return 
             print("all pass!")
         except Exception as e:
-            print(e)
+            print(str(e))
 
     def do_new_order(self, w_id:int, d_id:int, c_id:int, ol_i_id:List[int], ol_supply_w_id:List[int], ol_quantity:List[int]) -> SQLState:
         '''
@@ -287,7 +287,7 @@ class Driver:
 
             # 每一个都加上判断
             if res is None:
-                info("Error: select from DISTRICT failed or empty")
+                log_error("select from DISTRICT failed or empty")
                 exit(1)
                 return SQLState.ABORT
 
@@ -316,14 +316,14 @@ class Driver:
                             where=[(W_ID, eq, w_id), (C_W_ID, eq, W_ID), (C_D_ID, eq, d_id), (C_ID, eq, c_id)]
                             )
             if res is None:
-                info("Error: select from CUSTOMER and WAREHOUSE failed or empty")
+                log_error("select from CUSTOMER and WAREHOUSE failed or empty")
                 exit(1)
                 return SQLState.ABORT
             c_discount, c_last_, c_credit, w_tax = res[0]
             c_discount = eval(c_discount)
             w_tax = eval(w_tax)
         except Exception as e:
-            print('error', CUSTOMER, WAREHOUSE)
+            print(f'error {CUSTOMER}, {WAREHOUSE}: {str(e)}')
             # exit(1)
             c_discount = 0
             w_tax = 0
@@ -352,13 +352,13 @@ class Driver:
                                 col=[I_PRICE, I_NAME, I_DATA],
                                 where=[(I_ID, eq, ol_i_id[i])])
                 if res is None:
-                    info("Error: select from ITEM failed or empty")
+                    log_error("select from ITEM failed or empty")
                     exit(1)
                     return SQLState.ABORT
                 i_price, i_name, i_data = res[0]
                 i_price = eval(i_price)
             except Exception as e:
-                print('error', ITEM)
+                print(f'error {ITEM}: {str(e)}')
                 # exit(1)
                 i_price = 1
                 i_data = 'null'
@@ -374,7 +374,7 @@ class Driver:
                                 where=[(S_I_ID, eq, ol_i_id[i]),
                                     (S_W_ID, eq, ol_supply_w_id[i])])
                 if res is None:
-                    info("Error: select from STOCK failed or empty")
+                    log_error("Error: select from STOCK failed or empty")
                     exit(1)
                     return SQLState.ABORT
                 s_quantity, *s_dist, s_ytd, s_order_cnt, s_remote_cnt, s_data = res[0]
@@ -383,7 +383,7 @@ class Driver:
                 s_order_cnt = eval(s_order_cnt)
                 s_remote_cnt = eval(s_remote_cnt)
             except Exception as e:
-                print('error', STOCK)
+                print(f'error {STOCK}: {str(e)}')
                 # exit(1)
                 s_quantity = 0
                 s_ytd = 0
@@ -423,7 +423,7 @@ class Driver:
                     return SQLState.ABORT
 
             except Exception as e:
-                print('error', ORDER_LINE)
+                print(f'error {ORDER_LINE}: {str(e)}')
                 pass
 
             total_amount += ol_amount
@@ -459,7 +459,7 @@ class Driver:
                             col=[W_NAME, W_STREET_1, W_STREET_2, W_CITY, W_STATE, W_ZIP, W_YTD],
                             where=[(W_ID, eq, w_id)])
             if res is None:
-                info("Error: select from WAREHOUSE failed or empty")
+                log_error("Error: select from WAREHOUSE failed or empty")
                 exit(1)
                 return SQLState.ABORT
             w_name, w_street_1, w_street_2, w_city, w_state, w_zip, w_ytd = res[0]
@@ -479,7 +479,7 @@ class Driver:
                             col=[D_NAME, D_STREET_1, D_STREET_2, D_CITY, D_STATE, D_ZIP, D_YTD],
                             where=[(D_W_ID, eq, w_id), (D_ID, eq, d_id)])
             if res is None:
-                info("Error: select from DISTRICT failed or empty")
+                log_error("Error: select from DISTRICT failed or empty")
                 exit(1)
                 return SQLState.ABORT
             d_name, d_street_1, d_street_2, d_city, d_state, d_zip, d_ytd = res[0]
@@ -563,14 +563,14 @@ class Driver:
                                     (C_W_ID, eq, c_w_id),
                                     (C_D_ID, eq, c_d_id)])
                 if res is None:
-                    info("Error: select from CUSTOMER for C_DATA failed or empty")
+                    log_error("Error: select from CUSTOMER for C_DATA failed or empty")
                     exit(1)
                     return SQLState.ABORT
                 #! 因为当前建表长度限制是50
                 c_data = (''.join(map(str, [c_id, c_d_id, c_w_id, d_id, h_amount]))
                             + res[0][0])[0:50]
             except Exception as e:
-                print('error', CUSTOMER)
+                print(f'error {CUSTOMER}: {str(e)}')
                 pass
 
             if update(client=self._client,
@@ -616,14 +616,14 @@ class Driver:
                                 # asc=True
                                 )
                 if res is None:
-                    info("Error: select from CUSTOMER in do_order_status failed or empty")
+                    log_error("Error: select from CUSTOMER in do_order_status failed or empty")
                     exit(1)
                     return SQLState.ABORT
                 c_id, c_first, c_middle, c_last, c_balance = res[0]
                 c_id = eval(c_id)
                 c_balance = eval(c_balance)
             except Exception as e:
-                print('error', CUSTOMER)
+                print(f'error {CUSTOMER}: {str(e)}')
                 pass
         else:
             try:
@@ -634,14 +634,14 @@ class Driver:
                                         (C_W_ID, eq, w_id),
                                         (C_D_ID, eq, d_id)])
                 if res is None:
-                    info("Error: select from CUSTOMER by C_ID in do_order_status failed or empty")
+                    log_error("Error: select from CUSTOMER by C_ID in do_order_status failed or empty")
                     exit(1)
                     return SQLState.ABORT
                 c_id, c_first, c_middle, c_last, c_balance = res[0]
                 c_id = eval(c_id)
                 c_balance = eval(c_balance)
             except Exception as e:
-                print('error', CUSTOMER)
+                print(f'error {CUSTOMER}: {str(e)}')
                 pass
 
         try:
@@ -654,13 +654,13 @@ class Driver:
                             order_by=O_ID,
                             asc=False)
             if res is None:
-                info("Error: select from ORDERS in do_order_status failed or empty")
+                log_error("Error: select from ORDERS in do_order_status failed or empty")
                 exit(1)
                 return SQLState.ABORT
             o_id, o_entry_d, o_carrier_id = res[0]
             o_id = eval(o_id)
         except Exception as e:
-            print('error', ORDERS)
+            print(f'error {ORDERS}: {str(e)}')
             pass
 
         try:
@@ -671,12 +671,12 @@ class Driver:
                                 (OL_D_ID, eq, d_id),
                                 (OL_O_ID, eq, o_id)])
             if res is None:
-                info("Error: select from ORDER_LINE in do_order_status failed or empty")
+                log_error("Error: select from ORDER_LINE in do_order_status failed or empty")
                 exit(1)
                 return SQLState.ABORT
             # print(res)
         except Exception as e:
-            print('error', ORDER_LINE)
+            print(f'error {ORDER_LINE}: {str(e)}')
             pass
 
         if self._client.send_cmd("COMMIT;") == SQLState.ABORT:
@@ -706,12 +706,12 @@ class Driver:
                                 order_by=NO_O_ID,
                                 asc=True)
                 if res is None:
-                    info("Error: select from NEW_ORDERS in do_delivery failed or empty")
+                    log_error("Error: select from NEW_ORDERS in do_delivery failed or empty")
                     exit(1)
                     return SQLState.ABORT
                 no_o_id = eval(res[0][0])
             except Exception as e:
-                # print('error', NEW_ORDERS)
+                # print(f'error {NEW_ORDERS}: {str(e)}')
                 continue
 
             try:
@@ -722,12 +722,12 @@ class Driver:
                                     (O_D_ID, eq, d_id),
                                     (O_ID, eq, no_o_id)])
                 if res is None:
-                    info("Error: select from ORDERS in do_delivery failed or empty")
+                    log_error("Error: select from ORDERS in do_delivery failed or empty")
                     exit(1)
                     return SQLState.ABORT
                 o_c_id = eval(res[0][0])
             except Exception as e:
-                print('error', ORDERS)
+                print(f'error {ORDERS}: {str(e)}')
                 continue
 
             if update(client=self._client,
@@ -755,12 +755,12 @@ class Driver:
                                     (OL_D_ID, eq, d_id),
                                     (OL_O_ID, eq, no_o_id)])
                 if res is None:
-                    info("Error: select from ORDER_LINE in do_delivery failed or empty")
+                    log_error("Error: select from ORDER_LINE in do_delivery failed or empty")
                     exit(1)
                     return SQLState.ABORT
                 ol_total = eval(res[0][0])
             except Exception as e:
-                print('error', ORDER_LINE)
+                print(f'error {ORDER_LINE}: {str(e)}')
                 continue
 
             try:
@@ -771,14 +771,14 @@ class Driver:
                                     (C_D_ID, eq, d_id),
                                     (C_ID, eq, o_c_id)])
                 if res is None:
-                    info("Error: select from CUSTOMER in do_delivery failed or empty")
+                    log_error("Error: select from CUSTOMER in do_delivery failed or empty")
                     exit(1)
                     return SQLState.ABORT
                 c_balance, c_delivery_cnt = res[0]
                 c_balance = eval(c_balance)
                 c_delivery_cnt = eval(c_delivery_cnt)
             except Exception as e:
-                print('error', CUSTOMER)
+                print(f'error {CUSTOMER}: {str(e)}')
                 continue
 
             if update(client=self._client,
@@ -796,7 +796,6 @@ class Driver:
                                 (NO_D_ID, eq, d_id),
                                 (NO_O_ID, eq, no_o_id)]) == SQLState.ABORT:
                 return SQLState.ABORT
-
         if self._client.send_cmd("COMMIT;") == SQLState.ABORT:
             return SQLState.ABORT
         # print('- Delivery')
@@ -821,12 +820,12 @@ class Driver:
                             where=[(D_W_ID, eq, w_id),
                                 (D_ID, eq, d_id)])
             if res is None:
-                info("Error: select from DISTRICT in do_stock_level failed or empty")
+                log_error("Error: select from DISTRICT in do_stock_level failed or empty")
                 exit(1)
                 return SQLState.ABORT
             d_next_o_id = eval(res[0][0])
         except Exception as e:
-            print('error', DISTRICT)
+            print(f'error {DISTRICT}: {str(e)}')
             pass
 
         try:
@@ -838,12 +837,12 @@ class Driver:
                                 (OL_O_ID, beq, d_next_o_id - 20),
                                 (OL_O_ID, lt, d_next_o_id)])
             if res is None:
-                info("Error: select from ORDER_LINE in do_stock_level failed or empty")
+                log_error("Error: select from ORDER_LINE in do_stock_level failed or empty")
                 exit(1)
                 return SQLState.ABORT
             ol_i_ids = [eval(r[0]) for r in res]
         except Exception as e:
-            print('error', ORDER_LINE)
+            print(f'error {ORDER_LINE}: {str(e)}')
             pass
 
         low_stock_count = 0
@@ -857,16 +856,15 @@ class Driver:
                                 where=[(S_W_ID, eq, w_id),
                                     (S_I_ID, eq, ol_i_id)])
                 if res is None:
-                    info("Error: select from STOCK in do_stock_level failed or empty")
+                    log_error("Error: select from STOCK in do_stock_level failed or empty")
                     exit(1)
                     return SQLState.ABORT
                 s_quantity = eval(res[0][0])
                 if s_quantity < level:
                     low_stock_count += 1
         except Exception as e:
-            print('error', STOCK)
+            print(f'error {STOCK}: {str(e)}')
             pass
-
         if self._client.send_cmd("COMMIT;") == SQLState.ABORT:
             return SQLState.ABORT
         # print('- Stock Level')
