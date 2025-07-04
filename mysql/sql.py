@@ -2,7 +2,6 @@ from typing import Optional, Union, Tuple, List
 from enum import Enum  # 引入枚举类型
 
 from db.table_layouts import num_of_cols
-from debug_utils import TRACE_FUNCTION
 
 Value = Union[int, float, str]
 WhereCondition = Tuple[str, str, Value]
@@ -48,31 +47,30 @@ def select(
     order_by:Optional[str] = None, 
     asc:bool = False
 ) -> Union[List[List[str]], None]:
-    with TRACE_FUNCTION():
-        param = []
-        if where :
-            param = [ele[-1] for ele in where]
+    param = []
+    if where :
+        param = [ele[-1] for ele in where]
 
-        table_str = ','.join(table)
-        where_str = ' '.join([WHERE, AND.join([gen(ele) for ele in where])]) if where else ''
-        order_by_str = ' '.join([ORDER_BY, order_by, ASC if asc else DESC]) if order_by else ''
-        sql = ' '.join([SELECT, ','.join(col), FROM, table_str, where_str, order_by_str, ';'])
-        for i in param:
-            sql = sql.replace("%s", str(i), 1)
+    table_str = ','.join(table)
+    where_str = ' '.join([WHERE, AND.join([gen(ele) for ele in where])]) if where else ''
+    order_by_str = ' '.join([ORDER_BY, order_by, ASC if asc else DESC]) if order_by else ''
+    sql = ' '.join([SELECT, ','.join(col), FROM, table_str, where_str, order_by_str, ';'])
+    for i in param:
+        sql = sql.replace("%s", str(i), 1)
 
-        result = client.send_cmd(sql)
+    result = client.send_cmd(sql)
 
-        if result is None or result == '' or result.startswith('Error') or result.startswith('abort'):
-            return None
+    if result is None or result == '' or result.startswith('Error') or result.startswith('abort'):
+        return None
 
-        # 使用字符串分割提取数字部分
-        ## 1. 确定要获取多少列属性
-        real_col_num = 0
-        if (len(col) == 1 and col[0] == '*'):
-            for i in table:
-                real_col_num = real_col_num + num_of_cols[i]
-        else:
-            real_col_num = len(col)
+    # 使用字符串分割提取数字部分
+    ## 1. 确定要获取多少列属性
+    real_col_num = 0
+    if (len(col) == 1 and col[0] == '*'):
+        for i in table:
+            real_col_num = real_col_num + num_of_cols[i]
+    else:
+        real_col_num = len(col)
         '''
         +------------------+
         |               id |
@@ -116,48 +114,45 @@ def select(
 
 
 def insert(client, table:str , rows:List[Value]) -> SQLState:
-    with TRACE_FUNCTION():
-        values = ''.join([VALUES, '(', ','.join(['%s' for i in range(num_of_cols[table])]), ')'])
-        sql = ' '.join([INSERT, "into", table, values, ';'])
-        for i in rows:
-            sql = sql.replace("%s", str(i), 1)
+    values = ''.join([VALUES, '(', ','.join(['%s' for i in range(num_of_cols[table])]), ')'])
+    sql = ' '.join([INSERT, "into", table, values, ';'])
+    for i in rows:
+        sql = sql.replace("%s", str(i), 1)
 
-        if client.send_cmd(sql).startswith('abort'):
-            return SQLState.ABORT
-        else :
-            return SQLState.SUCCESS
+    if client.send_cmd(sql).startswith('abort'):
+        return SQLState.ABORT
+    else :
+        return SQLState.SUCCESS
 
 def update(client, table:str, set:SetConditions, where:WhereConditions) -> SQLState:
-    with TRACE_FUNCTION():
-        param = [ele[-1] for ele in where]
-        
-        where_str = ' '.join([WHERE, AND.join([gen(ele) for ele in where])]) if where else ''
-        var = [e[0] + ' = %s' for e in set]
-        val = [e[1] for e in set]
+    param = [ele[-1] for ele in where]
+    
+    where_str = ' '.join([WHERE, AND.join([gen(ele) for ele in where])]) if where else ''
+    var = [e[0] + ' = %s' for e in set]
+    val = [e[1] for e in set]
 
-        sql = ' '.join([UPDATE, table, SET, ','.join(var), where_str, ';'])
-        # print(sql,val+param)
-        for i in val:
-            sql = sql.replace("%s", str(i), 1)
-        for i in param:
-            sql = sql.replace("%s", str(i), 1)
-        # print(sql)
-        if client.send_cmd(sql).startswith('abort'):
-            return SQLState.ABORT
-        else :
-            return SQLState.SUCCESS
+    sql = ' '.join([UPDATE, table, SET, ','.join(var), where_str, ';'])
+    # print(sql,val+param)
+    for i in val:
+        sql = sql.replace("%s", str(i), 1)
+    for i in param:
+        sql = sql.replace("%s", str(i), 1)
+    # print(sql)
+    if client.send_cmd(sql).startswith('abort'):
+        return SQLState.ABORT
+    else :
+        return SQLState.SUCCESS
 
 
 def delete(client, table:str, where:Optional[WhereConditions] = None) -> SQLState:
-    with TRACE_FUNCTION():
-        param = []
-        if where:
-            param = [ele[-1] for ele in where]
-        where_str = ' '.join([WHERE, AND.join([gen(ele) for ele in where])]) if where else ''
-        sql = ' '.join([DELETE, FROM, table, where_str, ';'])
-        for i in param:
-            sql = sql.replace("%s", str(i), 1)
-        if client.send_cmd(sql).startswith('abort'):
-            return SQLState.ABORT
-        else :
-            return SQLState.SUCCESS
+    param = []
+    if where:
+        param = [ele[-1] for ele in where]
+    where_str = ' '.join([WHERE, AND.join([gen(ele) for ele in where])]) if where else ''
+    sql = ' '.join([DELETE, FROM, table, where_str, ';'])
+    for i in param:
+        sql = sql.replace("%s", str(i), 1)
+    if client.send_cmd(sql).startswith('abort'):
+        return SQLState.ABORT
+    else :
+        return SQLState.SUCCESS
