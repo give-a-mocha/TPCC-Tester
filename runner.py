@@ -100,7 +100,7 @@ def output_result():
     return result[0]['success']
 
 
-# useage: python TPCC-Tester/runner.py --prepare --thread 8 --rw 150 --ro 150 --analyze
+# useage: python TPCC-Tester/runner.py --prepare --thread 8 --rw 150 --ro 150 --analyze --w 1
 def main():
     parser = argparse.ArgumentParser(description='Python Script with Thread Number Argument')
     parser.add_argument('--prepare', action='store_true', help='Enable prepare mode')

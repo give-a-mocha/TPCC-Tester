@@ -13,8 +13,8 @@ class Client:
     sockfd = None
 
     def __init__(self):
-        readline.parse_and_bind("'\e[A': history-search-backward")
-        readline.parse_and_bind("'\e[B': history-search-forward")
+        readline.parse_and_bind("'\\e[A': history-search-backward")
+        readline.parse_and_bind("'\\e[B': history-search-forward")
 
         # parser = argparse.ArgumentParser()
         # parser.add_argument('-s', type=str, help='unix socket path')
