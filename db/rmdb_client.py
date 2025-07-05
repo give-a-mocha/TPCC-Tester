@@ -69,6 +69,7 @@ class Client:
                 if not recv_buf:
                     print("Connection has been closed")
                 else:
+                    log_info(f"--- RMDB Client Raw Request (bytes): {recv_buf.decode()}") # Added log
                     # print(recv_buf.decode(), end="")
                     return recv_buf.decode()
             except Exception as e:

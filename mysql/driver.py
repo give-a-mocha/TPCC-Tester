@@ -27,6 +27,9 @@ from util import (
 )
 from config import config
 
+
+ENABLE_SELECT_EMPTY = False  # 是否允许select结果为空
+
 class Driver:
     def __init__(self, scale):
         self._scale = scale    
@@ -287,11 +290,12 @@ class Driver:
 
             # 每一个都加上判断
             if res is None:
+                self._client.send_cmd("ABORT;")
+                if ENABLE_SELECT_EMPTY:
+                    return SQLState.ABORT
                 log_error("select from DISTRICT failed or empty")
                 error("select from DISTRICT failed or empty")
-                self._client.send_cmd("ABORT;")
                 exit(1)
-                return SQLState.ABORT
 
             d_tax, d_next_o_id = res[0]
             d_tax = eval(d_tax)
@@ -318,11 +322,12 @@ class Driver:
                             where=[(W_ID, eq, w_id), (C_W_ID, eq, W_ID), (C_D_ID, eq, d_id), (C_ID, eq, c_id)]
                             )
             if res is None:
+                self._client.send_cmd("ABORT;")
+                if ENABLE_SELECT_EMPTY:
+                    return SQLState.ABORT
                 log_error("select from CUSTOMER and WAREHOUSE failed or empty")
                 error("select from CUSTOMER and WAREHOUSE failed or empty")
-                self._client.send_cmd("ABORT;")
                 exit(1)
-                return SQLState.ABORT
             c_discount, c_last_, c_credit, w_tax = res[0]
             c_discount = eval(c_discount)
             w_tax = eval(w_tax)
@@ -356,11 +361,12 @@ class Driver:
                                 col=[I_PRICE, I_NAME, I_DATA],
                                 where=[(I_ID, eq, ol_i_id[i])])
                 if res is None:
+                    self._client.send_cmd("ABORT;")
+                    if ENABLE_SELECT_EMPTY:
+                        return SQLState.ABORT
                     log_error("select from ITEM failed or empty")
                     error("select from ITEM failed or empty")
-                    self._client.send_cmd("ABORT;")
                     exit(1)
-                    return SQLState.ABORT
                 i_price, i_name, i_data = res[0]
                 i_price = eval(i_price)
             except Exception as e:
@@ -380,11 +386,12 @@ class Driver:
                                 where=[(S_I_ID, eq, ol_i_id[i]),
                                     (S_W_ID, eq, ol_supply_w_id[i])])
                 if res is None:
+                    self._client.send_cmd("ABORT;")
+                    if ENABLE_SELECT_EMPTY:
+                        return SQLState.ABORT
                     log_error("Error: select from STOCK failed or empty")
                     error("Error: select from STOCK failed or empty")
-                    self._client.send_cmd("ABORT;")
                     exit(1)
-                    return SQLState.ABORT
                 s_quantity, *s_dist, s_ytd, s_order_cnt, s_remote_cnt, s_data = res[0]
                 s_quantity = eval(s_quantity)
                 s_ytd = eval(s_ytd)
@@ -467,11 +474,12 @@ class Driver:
                             col=[W_NAME, W_STREET_1, W_STREET_2, W_CITY, W_STATE, W_ZIP, W_YTD],
                             where=[(W_ID, eq, w_id)])
             if res is None:
+                self._client.send_cmd("ABORT;")
+                if ENABLE_SELECT_EMPTY:
+                    return SQLState.ABORT
                 log_error("Error: select from WAREHOUSE failed or empty")
                 error("Error: select from WAREHOUSE failed or empty")
-                self._client.send_cmd("ABORT;")
                 exit(1)
-                return SQLState.ABORT
             w_name, w_street_1, w_street_2, w_city, w_state, w_zip, w_ytd = res[0]
         except Exception as e:
             w_name, d_name = 'null', 'null'
@@ -489,11 +497,12 @@ class Driver:
                             col=[D_NAME, D_STREET_1, D_STREET_2, D_CITY, D_STATE, D_ZIP, D_YTD],
                             where=[(D_W_ID, eq, w_id), (D_ID, eq, d_id)])
             if res is None:
+                self._client.send_cmd("ABORT;")
+                if ENABLE_SELECT_EMPTY:
+                    return SQLState.ABORT
                 log_error("Error: select from DISTRICT failed or empty")
                 error("Error: select from DISTRICT failed or empty")
-                self._client.send_cmd("ABORT;")
                 exit(1)
-                return SQLState.ABORT
             d_name, d_street_1, d_street_2, d_city, d_state, d_zip, d_ytd = res[0]
         except Exception as e:
             d_name = 'null'
@@ -521,7 +530,12 @@ class Driver:
                                 # asc=True
                                 )
                 if result is None:
-                    return SQLState.ABORT
+                    self._client.send_cmd("ABORT;")
+                    if ENABLE_SELECT_EMPTY:
+                        return SQLState.ABORT
+                    log_error("Error: select from CUSTOMER failed or empty")
+                    error("Error: select from CUSTOMER failed or empty")
+                    exit(1)
                 result = result[0]
             except Exception as e:
                 c_credit = 'GC'
@@ -540,7 +554,12 @@ class Driver:
                                         (C_W_ID, eq, c_w_id),
                                         (C_D_ID, eq, c_d_id)])
                 if result is None:
-                    return SQLState.ABORT
+                    self._client.send_cmd("ABORT;")
+                    if ENABLE_SELECT_EMPTY:
+                        return SQLState.ABORT
+                    log_error("Error: select from CUSTOMER by C_ID failed or empty")
+                    error("Error: select from CUSTOMER by C_ID failed or empty")
+                    exit(1)
                 result = result[0]
                 c_id, c_first, c_midele, c_last, \
                     c_street_1, c_street_2, c_city, c_state, \
@@ -575,11 +594,12 @@ class Driver:
                                     (C_W_ID, eq, c_w_id),
                                     (C_D_ID, eq, c_d_id)])
                 if res is None:
+                    self._client.send_cmd("ABORT;")
+                    if ENABLE_SELECT_EMPTY:
+                        return SQLState.ABORT
                     log_error("Error: select from CUSTOMER for C_DATA failed or empty")
                     error("Error: select from CUSTOMER for C_DATA failed or empty")
-                    self._client.send_cmd("ABORT;")
                     exit(1)
-                    return SQLState.ABORT
                 #! 因为当前建表长度限制是50
                 c_data = (''.join(map(str, [c_id, c_d_id, c_w_id, d_id, h_amount]))
                             + res[0][0])[0:50]
@@ -630,11 +650,12 @@ class Driver:
                                 # asc=True
                                 )
                 if res is None:
+                    self._client.send_cmd("ABORT;")
+                    if ENABLE_SELECT_EMPTY:
+                        return SQLState.ABORT
                     log_error("Error: select from CUSTOMER in do_order_status failed or empty")
                     error("Error: select from CUSTOMER in do_order_status failed or empty")
-                    self._client.send_cmd("ABORT;")
                     exit(1)
-                    return SQLState.ABORT
                 c_id, c_first, c_middle, c_last, c_balance = res[0]
                 c_id = eval(c_id)
                 c_balance = eval(c_balance)
@@ -650,11 +671,12 @@ class Driver:
                                         (C_W_ID, eq, w_id),
                                         (C_D_ID, eq, d_id)])
                 if res is None:
+                    self._client.send_cmd("ABORT;")
+                    if ENABLE_SELECT_EMPTY:
+                        return SQLState.ABORT
                     log_error("Error: select from CUSTOMER by C_ID in do_order_status failed or empty")
                     error("Error: select from CUSTOMER by C_ID in do_order_status failed or empty")
-                    self._client.send_cmd("ABORT;")
                     exit(1)
-                    return SQLState.ABORT
                 c_id, c_first, c_middle, c_last, c_balance = res[0]
                 c_id = eval(c_id)
                 c_balance = eval(c_balance)
@@ -672,11 +694,12 @@ class Driver:
                             order_by=O_ID,
                             asc=False)
             if res is None:
+                self._client.send_cmd("ABORT;")
+                if ENABLE_SELECT_EMPTY:
+                    return SQLState.ABORT
                 log_error("Error: select from ORDERS in do_order_status failed or empty")
                 error("Error: select from ORDERS in do_order_status failed or empty")
-                self._client.send_cmd("ABORT;")
                 exit(1)
-                return SQLState.ABORT
             o_id, o_entry_d, o_carrier_id = res[0]
             o_id = eval(o_id)
         except Exception as e:
@@ -691,11 +714,12 @@ class Driver:
                                 (OL_D_ID, eq, d_id),
                                 (OL_O_ID, eq, o_id)])
             if res is None:
+                self._client.send_cmd("ABORT;")
+                if ENABLE_SELECT_EMPTY:
+                    return SQLState.ABORT
                 log_error("Error: select from ORDER_LINE in do_order_status failed or empty")
                 error("Error: select from ORDER_LINE in do_order_status failed or empty")
-                self._client.send_cmd("ABORT;")
                 exit(1)
-                return SQLState.ABORT
             # print(res)
         except Exception as e:
             print(f'error {ORDER_LINE}: {str(e)}')
@@ -728,11 +752,12 @@ class Driver:
                                 order_by=NO_O_ID,
                                 asc=True)
                 if res is None:
+                    self._client.send_cmd("ABORT;")
+                    if ENABLE_SELECT_EMPTY:
+                        return SQLState.ABORT
                     log_error("Error: select from NEW_ORDERS in do_delivery failed or empty")
                     error("Error: select from NEW_ORDERS in do_delivery failed or empty")
-                    self._client.send_cmd("ABORT;")
                     exit(1)
-                    return SQLState.ABORT
                 no_o_id = eval(res[0][0])
             except Exception as e:
                 # print(f'error {NEW_ORDERS}: {str(e)}')
@@ -746,11 +771,12 @@ class Driver:
                                     (O_D_ID, eq, d_id),
                                     (O_ID, eq, no_o_id)])
                 if res is None:
+                    self._client.send_cmd("ABORT;")
+                    if ENABLE_SELECT_EMPTY:
+                        return SQLState.ABORT
                     log_error("Error: select from ORDERS in do_delivery failed or empty")
                     error("Error: select from ORDERS in do_delivery failed or empty")
-                    self._client.send_cmd("ABORT;")
                     exit(1)
-                    return SQLState.ABORT
                 o_c_id = eval(res[0][0])
             except Exception as e:
                 print(f'error {ORDERS}: {str(e)}')
@@ -781,11 +807,12 @@ class Driver:
                                     (OL_D_ID, eq, d_id),
                                     (OL_O_ID, eq, no_o_id)])
                 if res is None:
+                    self._client.send_cmd("ABORT;")
+                    if ENABLE_SELECT_EMPTY:
+                        return SQLState.ABORT
                     log_error("Error: select from ORDER_LINE in do_delivery failed or empty")
                     error("Error: select from ORDER_LINE in do_delivery failed or empty")
-                    self._client.send_cmd("ABORT;")
                     exit(1)
-                    return SQLState.ABORT
                 ol_total = eval(res[0][0])
             except Exception as e:
                 print(f'error {ORDER_LINE}: {str(e)}')
@@ -799,11 +826,12 @@ class Driver:
                                     (C_D_ID, eq, d_id),
                                     (C_ID, eq, o_c_id)])
                 if res is None:
+                    self._client.send_cmd("ABORT;")
+                    if ENABLE_SELECT_EMPTY:
+                        return SQLState.ABORT
                     log_error("Error: select from CUSTOMER in do_delivery failed or empty")
                     error("Error: select from CUSTOMER in do_delivery failed or empty")
-                    self._client.send_cmd("ABORT;")
                     exit(1)
-                    return SQLState.ABORT
                 c_balance, c_delivery_cnt = res[0]
                 c_balance = eval(c_balance)
                 c_delivery_cnt = eval(c_delivery_cnt)
@@ -850,11 +878,12 @@ class Driver:
                             where=[(D_W_ID, eq, w_id),
                                 (D_ID, eq, d_id)])
             if res is None:
+                self._client.send_cmd("ABORT;")
+                if ENABLE_SELECT_EMPTY:
+                    return SQLState.ABORT
                 log_error("Error: select from DISTRICT in do_stock_level failed or empty")
                 error("Error: select from DISTRICT in do_stock_level failed or empty")
-                self._client.send_cmd("ABORT;")
                 exit(1)
-                return SQLState.ABORT
             d_next_o_id = eval(res[0][0])
         except Exception as e:
             print(f'error {DISTRICT}: {str(e)}')
@@ -869,11 +898,12 @@ class Driver:
                                 (OL_O_ID, beq, d_next_o_id - 20),
                                 (OL_O_ID, lt, d_next_o_id)])
             if res is None:
+                self._client.send_cmd("ABORT;")
+                if ENABLE_SELECT_EMPTY:
+                    return SQLState.ABORT
                 log_error("Error: select from ORDER_LINE in do_stock_level failed or empty")
                 error("Error: select from ORDER_LINE in do_stock_level failed or empty")
-                self._client.send_cmd("ABORT;")
                 exit(1)
-                return SQLState.ABORT
             ol_i_ids = [eval(r[0]) for r in res]
         except Exception as e:
             print(f'error {ORDER_LINE}: {str(e)}')
@@ -890,11 +920,12 @@ class Driver:
                                 where=[(S_W_ID, eq, w_id),
                                     (S_I_ID, eq, ol_i_id)])
                 if res is None:
+                    self._client.send_cmd("ABORT;")
+                    if ENABLE_SELECT_EMPTY:
+                        return SQLState.ABORT
                     log_error("Error: select from STOCK in do_stock_level failed or empty")
                     error("Error: select from STOCK in do_stock_level failed or empty")
-                    self._client.send_cmd("ABORT;")
                     exit(1)
-                    return SQLState.ABORT
                 s_quantity = eval(res[0][0])
                 if s_quantity < level:
                     low_stock_count += 1
