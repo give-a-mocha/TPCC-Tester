@@ -28,7 +28,7 @@ from util import (
 from config import config
 
 
-ENABLE_SELECT_EMPTY = False  # 是否允许select结果为空
+ENABLE_SELECT_EMPTY = True  # 是否允许select结果为空
 
 class Driver:
     def __init__(self, scale):
