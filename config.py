@@ -49,5 +49,14 @@ config = Config()
 def set_warehouse_count(cnt_w):
     """设置仓库数量并更新全局配置"""
     global config
-    config = Config(cnt_w)
+    # 直接修改现有 config 实例的属性，而不是创建一个新实例
+    config.CNT_W = cnt_w
+    config.CNT_STOCK = config.CNT_W * config.STOCK_PER_WARE
+    config.CNT_DISTRICT = config.CNT_W * config.DIST_PER_WARE
+    config.CNT_CUSTOMER = config.CNT_W * config.DIST_PER_WARE * config.CUST_PER_DIST
+    config.CNT_HISTORY = config.CNT_CUSTOMER
+    config.CNT_ORDERS = config.CNT_CUSTOMER
+    config.CNT_NEW_ORDERS = config.CNT_W * config.DIST_PER_WARE * 900
+    config.CNT_ORDER_LINE = config.CNT_ORDERS * config.ORDER_LINE_PER_ORDER
+    config.W_ID_MAX = config.CNT_W + 1
     return config
