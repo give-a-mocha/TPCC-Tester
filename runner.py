@@ -93,8 +93,8 @@ def output_result():
     # plt.show()
 
     # 删除数据库文件
-    if os.path.exists('TPCC-Tester/result/rds.db'):
-        os.remove('TPCC-Tester/result/rds.db')
+    # if os.path.exists('TPCC-Tester/result/rds.db'):
+    #     os.remove('TPCC-Tester/result/rds.db')
 
     # 返回 new order 成功数量
     return result[0]['success']
