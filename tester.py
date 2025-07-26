@@ -2,6 +2,7 @@ import time
 import random
 
 from mysql.driver import SQLState
+from config import set_warehouse_count
 from record.record import (
     put_txn, put_new_order
 )
@@ -22,7 +23,8 @@ def get_choice(choices):
     assert False, "Shouldn't get here"
 
 
-def do_test(driver, lock, txns, txn_prob=None):
+def do_test(driver, lock, txns, txn_prob, cnt_w):
+    set_warehouse_count(cnt_w)
     # print(duration)
     # print('Test')
     t1 = 0

@@ -35,15 +35,15 @@ def prepare():
     driver.delay_close()
 
 
-def test(lock, tid, txns=150, txn_prob=None, warehouses=1, enable_debug=False, enable_logging=False):
+def test(lock, tid, txns, txn_prob, warehouses, enable_debug, enable_logging, p_config):
     from debug_utils import set_process_id, close_log, enable_log
     if enable_debug:
         enable_log(True)
     if enable_logging:
         set_process_id(tid)
     print(f'+ Test_{tid} Begin')
-    driver = Driver(scale=config.CNT_W)
-    do_test(driver, lock, txns, txn_prob)
+    driver = Driver(scale=p_config.CNT_W)
+    do_test(driver, lock, txns, txn_prob, p_config.CNT_W)
     print(f'- Test_{tid} Finished')
     driver.delay_close()
     close_log()
@@ -137,7 +137,7 @@ def main():
         if args.rw:
             for i in range(thread_num):
                 process_list.append(
-                    Process(target=test, args=(lock, 'rw_' + str(i + 1), args.rw, [10 / 23, 10 / 23, 1 / 23, 1 / 23, 1 / 23], 1, args.debug, args.log)))
+                    Process(target=test, args=(lock, 'rw_' + str(i + 1), args.rw, [10 / 23, 10 / 23, 1 / 23, 1 / 23, 1 / 23], 1, args.debug, args.log, config)))
                 process_list[i].start()
 
             for i in range(thread_num):
@@ -146,7 +146,7 @@ def main():
         process_list = []
         if args.ro:
             for i in range(thread_num):
-                process_list.append(Process(target=test, args=(lock, 'ro_' + str(i + 1), args.ro, [0, 0, 0, 0.5, 0.5], 1, args.debug, args.log)))
+                process_list.append(Process(target=test, args=(lock, 'ro_' + str(i + 1), args.ro, [0, 0, 0, 0.5, 0.5], 1, args.debug, args.log, config)))
                 process_list[i].start()
 
             for i in range(thread_num):
