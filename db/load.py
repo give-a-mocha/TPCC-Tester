@@ -3,6 +3,7 @@ import csv
 import os
 import argparse
 import sys
+from tqdm import trange
 
 # 添加父目录到 Python 路径以导入 config 和 util 模块
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -133,23 +134,18 @@ def load_items(output_dir="."):
     """Loads the Item table data and writes to CSV."""
     print("Loading Item ")
     filepath = os.path.join(output_dir, "item.csv")
-    with open(filepath, 'w', newline='') as csvfile:
+    with open(filepath, 'w', newline='', buffering=10240) as csvfile:
         writer = csv.writer(csvfile)
         # Write header
         writer.writerow(["i_id", "i_im_id", "i_name", "i_price", "i_data"])
 
-        for i_id in range(1, config.CNT_ITEM + 1):
+        for i_id in trange(1, config.CNT_ITEM + 1, ncols=80, colour='green'):
             i_im_id = get_random_num(1, 10000)  # [1, 10000]
             i_name = rand_str(14, 25)
             i_price = get_random_num(100, 10000) / 100.0  # [1.00, 100.00]
             i_data = rand_dat(26, 51)
 
             writer.writerow([i_id, i_im_id, i_name, i_price, i_data])
-
-            if i_id % 100 == 0:
-                print(".", end='', flush=True)
-                if i_id % 5000 == 0:
-                    print(f" {i_id}", flush=True)
         print("\nItem Done. ")
 
 def load_ware(output_dir="."):
@@ -159,9 +155,9 @@ def load_ware(output_dir="."):
     stock_filepath = os.path.join(output_dir, "stock.csv")
     district_filepath = os.path.join(output_dir, "district.csv")
 
-    with open(ware_filepath, 'w', newline='') as ware_csv, \
-         open(stock_filepath, 'w', newline='') as stock_csv, \
-         open(district_filepath, 'w', newline='') as district_csv:
+    with open(ware_filepath, 'w', newline='', buffering=10240) as ware_csv, \
+         open(stock_filepath, 'w', newline='', buffering=10240) as stock_csv, \
+         open(district_filepath, 'w', newline='', buffering=10240) as district_csv:
 
         ware_writer = csv.writer(ware_csv)
         stock_writer = csv.writer(stock_csv)
@@ -172,7 +168,7 @@ def load_ware(output_dir="."):
         stock_writer.writerow(["s_i_id", "s_w_id", "s_quantity", "s_dist_01", "s_dist_02", "s_dist_03", "s_dist_04", "s_dist_05", "s_dist_06", "s_dist_07", "s_dist_08", "s_dist_09", "s_dist_10", "s_ytd", "s_order_cnt", "s_remote_cnt", "s_data"])
         district_writer.writerow(["d_id", "d_w_id", "d_name", "d_street_1", "d_street_2", "d_city", "d_state", "d_zip", "d_tax", "d_ytd", "d_next_o_id"])
 
-        for w_id in range(1, config.CNT_W + 1):
+        for w_id in trange(1, config.CNT_W + 1, position=1, ncols=80, colour='green'):
             # Generate Warehouse Data
             w_name = rand_str(6, 11)
             w_street_1, w_street_2, w_city, w_state, w_zip = MakeAddress()
@@ -181,10 +177,7 @@ def load_ware(output_dir="."):
 
             ware_writer.writerow([w_id, w_name, w_street_1, w_street_2, w_city, w_state, w_zip, w_tax, w_ytd])
 
-            # Generate Stock Data for this warehouse
-            print(f"Loading Stock Wid={w_id}")
-
-            for s_i_id in range(1, config.CNT_ITEM + 1):
+            for s_i_id in trange(1, config.CNT_ITEM + 1, position=2, ncols=80, colour='blue'):
                 s_w_id = w_id
                 s_quantity = get_random_num(10, 100)
                 s_dist_01 = rand_str(24)
@@ -200,15 +193,6 @@ def load_ware(output_dir="."):
                 s_data = rand_dat(26, 51)
 
                 stock_writer.writerow([s_i_id, s_w_id, s_quantity, s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10, 0, 0, 0, s_data])
-
-                if s_i_id % 100 == 0:
-                    print(".", end='', flush=True)
-                    if s_i_id % 5000 == 0:
-                        print(f" {s_i_id}", flush=True)
-            print(" Stock Done.")
-
-            # Generate District Data for this warehouse
-            print("Loading District")
             d_w_id = w_id
             d_ytd = 30000.0
             d_next_o_id = 3001
@@ -218,7 +202,7 @@ def load_ware(output_dir="."):
                 d_street_1, d_street_2, d_city, d_state, d_zip = MakeAddress()
                 d_tax = get_random_num(0, 2000) / 10000.0  # [0.0000, 0.2000]
                 district_writer.writerow([d_id, d_w_id, d_name, d_street_1, d_street_2, d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id])
-            print(" District Done.")
+
         print("Warehouse Done.")
 
 
@@ -228,8 +212,8 @@ def load_cust(output_dir="."):
     cust_filepath = os.path.join(output_dir, "customer.csv")
     hist_filepath = os.path.join(output_dir, "history.csv")
 
-    with open(cust_filepath, 'w', newline='') as cust_csv, \
-         open(hist_filepath, 'w', newline='') as hist_csv:
+    with open(cust_filepath, 'w', newline='', buffering=10240) as cust_csv, \
+         open(hist_filepath, 'w', newline='', buffering=10240) as hist_csv:
 
         cust_writer = csv.writer(cust_csv)
         hist_writer = csv.writer(hist_csv)
@@ -238,9 +222,8 @@ def load_cust(output_dir="."):
         cust_writer.writerow(["c_id", "c_d_id", "c_w_id", "c_first", "c_middle", "c_last", "c_street_1", "c_street_2", "c_city", "c_state", "c_zip", "c_phone", "c_since", "c_credit", "c_credit_lim", "c_discount", "c_balance", "c_ytd_payment", "c_payment_cnt", "c_delivery_cnt", "c_data"])
         hist_writer.writerow(["h_c_id", "h_c_d_id", "h_c_w_id", "h_d_id", "h_w_id", "h_date", "h_amount", "h_data"])
 
-        for w_id in range(1, config.CNT_W + 1):
-            for d_id in range(1, config.DIST_PER_WARE + 1):
-                print(f"Loading Customer for DID={d_id}, WID={w_id}")
+        for w_id in trange(1, config.CNT_W + 1, position=1, ncols=80, colour='green'):
+            for d_id in trange(1, config.DIST_PER_WARE + 1, position=2, ncols=80, colour='blue'):
                 c_d_id = d_id
                 c_w_id = w_id
 
@@ -276,13 +259,6 @@ def load_cust(output_dir="."):
 
                     hist_writer.writerow([h_c_id, h_c_d_id, h_c_w_id, h_d_id, h_w_id, h_date, h_amount, h_data])
 
-                    if c_id % 100 == 0:
-                        print(".", end='', flush=True)
-                        if c_id % 1000 == 0:
-                            print(f" {c_id}", flush=True)
-                print("Customer Done.")
-        print("Customer Loading Completed for all Warehouses/Districts.")
-
 
 def load_ord(output_dir="."):
     """Loads the Orders, New-Orders, and Order-Line tables data and writes to CSV."""
@@ -291,9 +267,9 @@ def load_ord(output_dir="."):
     neword_filepath = os.path.join(output_dir, "new_orders.csv")
     orl_filepath = os.path.join(output_dir, "order_line.csv")
 
-    with open(ord_filepath, 'w', newline='') as ord_csv, \
-         open(neword_filepath, 'w', newline='') as neword_csv, \
-         open(orl_filepath, 'w', newline='') as orl_csv:
+    with open(ord_filepath, 'w', newline='', buffering=10240) as ord_csv, \
+         open(neword_filepath, 'w', newline='', buffering=10240) as neword_csv, \
+         open(orl_filepath, 'w', newline='', buffering=10240) as orl_csv:
 
         ord_writer = csv.writer(ord_csv)
         neword_writer = csv.writer(neword_csv)
@@ -304,9 +280,8 @@ def load_ord(output_dir="."):
         neword_writer.writerow(["no_o_id", "no_d_id", "no_w_id"])
         orl_writer.writerow(["ol_o_id", "ol_d_id", "ol_w_id", "ol_number", "ol_i_id", "ol_supply_w_id", "ol_delivery_d", "ol_quantity", "ol_amount", "ol_dist_info"])
 
-        for w_id in range(1, config.CNT_W + 1):
-            for d_id in range(1, config.DIST_PER_WARE + 1):
-                print(f"Loading Orders for D={d_id}, W={w_id}")
+        for w_id in trange(1, config.CNT_W + 1, position=1, ncols=80, colour='green'):
+            for d_id in trange(1, config.DIST_PER_WARE + 1, position=2, ncols=80, colour='blue'):
                 o_d_id = d_id
                 o_w_id = w_id
 
@@ -344,11 +319,6 @@ def load_ord(output_dir="."):
 
                         orl_writer.writerow([ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info])
 
-                    if o_id % 100 == 0:
-                        print(".", end='', flush=True)
-                        if o_id % 1000 == 0:
-                            print(f" {o_id}", flush=True)
-                print("Orders Done.")
         print("Orders Loading Completed for all Warehouses/Districts.")
 
 
