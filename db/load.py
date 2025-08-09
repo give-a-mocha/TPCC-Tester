@@ -4,7 +4,7 @@ import csv
 import os
 import argparse
 import sys
-from tqdm import trange
+from tqdm import trange, tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing as mp
 
@@ -153,6 +153,27 @@ def load_items(output_dir="."):
         writer.writerows(batch_data)
         print("\nItem Done. ")
 
+def load_ware_work(w_id):
+    batch_data2 = deque()
+    # for s_i_id in trange(1, config.CNT_ITEM + 1, position=3, ncols=80, colour='blue'):
+    for s_i_id in range(1, config.CNT_ITEM + 1):
+        s_w_id = w_id
+        s_quantity = get_random_num(10, 100)
+        s_dist_01 = rand_str(24)
+        s_dist_02 = rand_str(24)
+        s_dist_03 = rand_str(24)
+        s_dist_04 = rand_str(24)
+        s_dist_05 = rand_str(24)
+        s_dist_06 = rand_str(24)
+        s_dist_07 = rand_str(24)
+        s_dist_08 = rand_str(24)
+        s_dist_09 = rand_str(24)
+        s_dist_10 = rand_str(24)
+        s_data = rand_dat(26, 51)
+
+        batch_data2.append([s_i_id, s_w_id, s_quantity, s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10, 0, 0, 0, s_data])
+    return batch_data2
+
 def load_ware(output_dir="."):
     """Loads the Warehouse, Stock, and District tables data and writes to CSV."""
     print("Loading Warehouse ")
@@ -177,43 +198,34 @@ def load_ware(output_dir="."):
         stock_writer.writerow(["s_i_id", "s_w_id", "s_quantity", "s_dist_01", "s_dist_02", "s_dist_03", "s_dist_04", "s_dist_05", "s_dist_06", "s_dist_07", "s_dist_08", "s_dist_09", "s_dist_10", "s_ytd", "s_order_cnt", "s_remote_cnt", "s_data"])
         district_writer.writerow(["d_id", "d_w_id", "d_name", "d_street_1", "d_street_2", "d_city", "d_state", "d_zip", "d_tax", "d_ytd", "d_next_o_id"])
 
-        for w_id in trange(1, config.CNT_W + 1, position=2, ncols=80, colour='green'):
-            # Generate Warehouse Data
-            w_name = rand_str(6, 11)
-            w_street_1, w_street_2, w_city, w_state, w_zip = MakeAddress()
-            w_tax = get_random_num(0, 2000) / 10000.0  # [0.0000, 0.2000]
-            w_ytd = 300000.00
+        with ProcessPoolExecutor(max_workers=64) as executor:
+            futures = []
 
-            batch_data1.append([w_id, w_name, w_street_1, w_street_2, w_city, w_state, w_zip, w_tax, w_ytd])
-            batch_data2 = deque()
-            for s_i_id in trange(1, config.CNT_ITEM + 1, position=3, ncols=80, colour='blue'):
-                s_w_id = w_id
-                s_quantity = get_random_num(10, 100)
-                s_dist_01 = rand_str(24)
-                s_dist_02 = rand_str(24)
-                s_dist_03 = rand_str(24)
-                s_dist_04 = rand_str(24)
-                s_dist_05 = rand_str(24)
-                s_dist_06 = rand_str(24)
-                s_dist_07 = rand_str(24)
-                s_dist_08 = rand_str(24)
-                s_dist_09 = rand_str(24)
-                s_dist_10 = rand_str(24)
-                s_data = rand_dat(26, 51)
+            for w_id in trange(1, config.CNT_W + 1, position=2, ncols=80, colour='green'):
+                # Generate Warehouse Data
+                w_name = rand_str(6, 11)
+                w_street_1, w_street_2, w_city, w_state, w_zip = MakeAddress()
+                w_tax = get_random_num(0, 2000) / 10000.0  # [0.0000, 0.2000]
+                w_ytd = 300000.00
 
-                batch_data2.append([s_i_id, s_w_id, s_quantity, s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10, 0, 0, 0, s_data])
-            stock_writer.writerows(batch_data2)
-            d_w_id = w_id
-            d_ytd = 30000.0
-            d_next_o_id = 3001
-            batch_data3 = deque()
-            for d_id in range(1, config.DIST_PER_WARE + 1):
-                d_name = rand_str(6, 11)
-                d_street_1, d_street_2, d_city, d_state, d_zip = MakeAddress()
-                d_tax = get_random_num(0, 2000) / 10000.0  # [0.0000, 0.2000]
-                batch_data3.append([d_id, d_w_id, d_name, d_street_1, d_street_2, d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id])
-            district_writer.writerows(batch_data3) 
-        ware_writer.writerows(batch_data1)
+                batch_data1.append([w_id, w_name, w_street_1, w_street_2, w_city, w_state, w_zip, w_tax, w_ytd])
+                futures.append(executor.submit(load_ware_work, w_id))
+                
+                d_w_id = w_id
+                d_ytd = 30000.0
+                d_next_o_id = 3001
+                batch_data3 = deque()
+                for d_id in range(1, config.DIST_PER_WARE + 1):
+                    d_name = rand_str(6, 11)
+                    d_street_1, d_street_2, d_city, d_state, d_zip = MakeAddress()
+                    d_tax = get_random_num(0, 2000) / 10000.0  # [0.0000, 0.2000]
+                    batch_data3.append([d_id, d_w_id, d_name, d_street_1, d_street_2, d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id])
+                district_writer.writerows(batch_data3) 
+            ware_writer.writerows(batch_data1)
+
+            for future in tqdm(futures, position=3, ncols=80, colour='blue'):
+                batch_data2 = future.result()
+                stock_writer.writerows(batch_data2)
         
         print("Warehouse Done.")
 
